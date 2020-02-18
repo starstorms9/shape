@@ -1,6 +1,3 @@
-import subprocess
-subprocess.call('conda config --append channels conda-forge', shell=True)
-
 import numpy as np
 import pandas as pd
 import streamlit as st
