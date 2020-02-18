@@ -244,15 +244,12 @@ tensorflow=2.0.0=gpu_py37h768510d_0
 tensorflow-base=2.0.0=gpu_py37h0ec5d1f_0
 tensorflow-datasets=1.2.0=py37_0
 tensorflow-docs=0.0.0=pypi_0
-tensorflow-estimator=2.0.1=pypi_0
-tensorflow-examples=9be9aa2bb888ad44219e13c5605510c0a821c401-=pypi_0
 tensorflow-gpu=2.0.0=h0d30ee6_0
 tensorflow-hub=0.7.0=pyhe6710b0_0
 tensorflow-metadata=0.14.0=pyhe6710b0_1
 termcolor=1.1.0=py37_1
 terminado=0.8.3=py37_0
 testpath=0.4.4=py_0
-thinc=7.3.0=py37hc9558a2_0
 tk=8.6.8=hbc83047_0
 toml=0.10.0=pypi_0
 toolz=0.10.0=py_0
