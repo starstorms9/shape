@@ -130,7 +130,6 @@ def read_as_3d_array(fp, fix_coords=True, reduction_factor=1):
     values, counts = raw_data[::2], raw_data[1::2]
     data = np.repeat(values, counts).astype(np.bool)
     data = data.reshape(dims)
-    data = data * value_scale
     if fix_coords:
         # xzy to xyz TODO the right thing
         data = np.transpose(data, (0, 2, 1))

@@ -12,6 +12,7 @@ import random
 import cvae_dev as cv
 import binvox_rw as bv
 import utils as ut
+import model_helper as ml
 
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -25,79 +26,32 @@ random.seed(488)
 
 #%% Voxelize data with command line
 model_save_filepath = '/home/starstorms/Insight/shape/models'
-vox_in_dir = '/home/starstorms/Insight/ShapeNet/voxs'
+vox_in_dir = '/home/starstorms/Insight/ShapeNet/all'
+# cat_prefixes = ['04256520','02958343']
+cat_prefixes = ['02958343']
 
 vox_size = 64
 latent_dim = 10
 num_models_load = 1300
-    
+batch_size = 128
+
 #%% Load models into numpy array and create TF dataset
-# cat_prefixes = ['04256520','02958343']
-cat_prefixes = ['02958343']
+train_dataset = ut.loadData(vox_size, num_models_load, vox_in_dir, cat_prefixes, batch_size)
 
-voxs = np.zeros((num_models_load, vox_size, vox_size, vox_size, 1))
-vox_fps = ut.getMixedFPs(vox_in_dir, num_models_load, cat_prefixes)
+#%% Make model and print info    
+model = ut.makeModel(vox_size, latent_dim, learning_rate=1e-3)
 
-for i, file in enumerate(vox_fps):
-    fullpath = os.path.join(vox_in_dir, file)
-    voxs[i,:,:,:,0] = ut.loadBVVariable(fullpath, target_vox_size = vox_size).data
-    
-voxs = np.float32(voxs)
-
-SHUFFLE_BUF = 1000
-BATCH_SIZE = 128
-train_dataset = tf.data.Dataset.from_tensor_slices(voxs).shuffle(SHUFFLE_BUF).batch(BATCH_SIZE, drop_remainder=True)
-  
-#%% Make model and print info
-import cvae_dev as cv
-model = cv.CVAE(latent_dim, vox_size)
-model.setLR(1e-3)
-model.printMSums()
-model.printIO()
-loss = tf.keras.metrics.Mean()
-total_epochs = 0
 samples = list(train_dataset.unbatch().batch(1).skip(10).take(50))
 
 #%% Train
-def trainModel(epochs, display_interval=-1, sample_index=0) :
-    print('\n\nStarting training...\n\n')
-    global total_epochs
-    losses = []
-    
-    for epoch in range(1, epochs + 1):
-        start_time = time.time()
-        for train_x in train_dataset:
-            model.compute_apply_gradients(train_x)
-        end_time = time.time()
-    
-        total_epochs = total_epochs + 1
-        
-        if epoch % 1 == 0:
-            for test_x in train_dataset :
-                loss(model.compute_loss(test_x))
-            elbo = -loss.result()
-            losses.append(elbo)
-            print('Epoch: {}, Test set ELBO: {:.2f}, time elapsed for current epoch {:.2f}'.format(total_epochs, float(-elbo), float(end_time - start_time)))
-        
-        if ((display_interval > 0) & (epoch % display_interval == 0)) :
-            ut.showReconstruct(model, samples, index=sample_index, show_original=False)
-        
-        if epoch % 100 == 0:
-            model.saveWeights(model_save_filepath, '_Epoch{:04d}'.format(total_epochs))
-    
-    model.saveWeights(model_save_filepath, '_latest')
-    print("\n\nDone, weights saved to:\n{}".format(model_save_filepath))
-    return losses
-
-#%%
 sample_index = 1
-ut.showReconstruct(model, samples, sample_index, show_reconstruct=False)
-losses = trainModel(10000, display_interval=3)
+ut.showReconstruct(model, samples, sample_index, title=ml.total_epochs, show_reconstruct=False)
+losses = ml.trainModel(model, train_dataset, 100, samples, sample_index=sample_index, display_interval=3)
 plt.plot(losses)
 
 #%%
-model.saveWeights(model_save_filepath, '_Epoch{:04d}'.format(total_pochs))
-model.loadWeights(model_save_filepath + '', '_Epoch{:04d}'.format(408))
+model.saveWeights(model_save_filepath, '_Epoch{:04d}'.format(ml.total_epochs))
+model.loadWeights(model_save_filepath + '/p2xlarge', '_Epoch{:04d}'.format(510))
 
 #%% Show reconstructed models
 for i in range(len(samples)) : ut.showReconstruct(model, samples, index=i, show_original=True, show_reconstruct=True)
@@ -144,7 +98,7 @@ for i, sample in enumerate(v) :
     ut.plotVox(sample, step=1, threshold=0.5, limits=[60, 30, 30], show_axes=False, )
 
 #%% Create gif from images in folder with bash and ImageMagick (replace XX with max number of images or just set high and error)
-!convert -delay 10 -loop 0 *_{0..XX}.png car2truck.gif
+# !convert -delay 10 -loop 0 *_{0..XX}.png car2truck.gif
 
 #%%
 prefix = 'sofa'
@@ -156,7 +110,7 @@ file_name = file_name_vox
 file_ext = '.' + str.split(file_name, sep='.')[-1]
 
 files_to_move = [ '{}/{}/models/{}'.format(in_fp, folder, file_name) for folder in os.listdir(in_fp) ]
-move_to = [ '{}/{}{}{{}'.format(out_fp, prefix, i+1, file_ext) for i in range(len(files_to_move)) ]
+move_to = [ '{}/{}{}{}'.format(out_fp, prefix, i+1, file_ext) for i in range(len(files_to_move)) ]
 
 for i in range(len(files_to_move)) :
     os.rename(files_to_move[i], move_to[i])

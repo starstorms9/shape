@@ -2,17 +2,21 @@
 import numpy as np
 import os
 import subprocess
+# if (not os.path.isdir('/data/sn/all')) : subprocess.call('sync_scripts.sh', shell=True)
+
 from sys import getsizeof
 import skimage.measure as sm
 import time
 import json
 import pandas as pd
 import random
+from tqdm import trange, tqdm
+from scipy import signal
 
-import cvae as cv
 import binvox_rw as bv
 
 import matplotlib.pyplot as plt
+import matplotlib.image as mpimg
 from mpl_toolkits.mplot3d import Axes3D
 import plotly.graph_objects as go
 from plotly.offline import plot
@@ -21,6 +25,9 @@ import matplotlib.cm as cm
 # from pandas_ods_reader import read_ods
 
 import tensorflow as tf
+
+#%%
+dfmeta_fp = '/data/sn/all/meta/dfmeta.csv'
 
 #%% Basic Functions
 def minmax(arr) :
@@ -43,45 +50,154 @@ def superSample(list_to_sample, samples) :
     else:
         return random.sample(list_to_sample, samples)
 
-#%% ShapeNet
-def getMeta(reg_fp = "/home/starstorms/Insight/ShapeNet/meta/meta.ods", sheet_name = 'meta'):    
-    return read_ods(reg_fp, sheet_name)
+#%% Data methods
+def addTimeStamp(path='') :
+    os.environ['TZ'] = 'US/Pacific'
+    time.tzset()
+    return path + time.strftime("%m%d-%H%M")
 
-def getJSON(json_fp) :
-    json = pd.read_json(json_fp)
-    return json
+def getSubDirs(a_dir):
+    return [name for name in os.listdir(a_dir) if os.path.isdir(os.path.join(a_dir, name))]    
 
-def getTax(tax_fn = "/home/starstorms/Insight/ShapeNet/meta/taxonomy.json") :
-    tax = pd.read_json(tax_fn)
-    tax['numc'] = tax.apply (lambda row: len(row.children), axis=1)
-    return tax
-
-def ranameVoxs(vox_in_dir, prefix) :
-    for i, file in enumerate(os.listdir(vox_in_dir)) :
-        fullpath = os.path.join(vox_in_dir, file)
-        newpath = os.path.join(vox_in_dir, '{}_{:05d}.binvox'.format(prefix, i))
-        print(fullpath, '\n', newpath, '\n')
-        os.rename(fullpath, newpath)
-    
 def getMixedFPs(vox_in_dir, num_models_load, cat_prefixes) :
     vox_fps = os.listdir(vox_in_dir)
-    cat_vox_fps = [ [item for item in vox_fps if item.startswith(cat)] for cat in cat_prefixes ]
+    cat_vox_fps = [ [ os.path.join(cat, directory, 'models/model_normalized.solid.binvox') for directory in os.listdir(os.path.join(vox_in_dir, cat))] for cat in cat_prefixes ]
     cat_vox_fps = [superSample(cat, int(num_models_load / len(cat_prefixes))) for cat in cat_vox_fps]
     
     vox_fps = []
     for cat_list in cat_vox_fps : vox_fps.extend(cat_list)
     return vox_fps
 
-#%% 3D Model Functions
-def loadBV(filename, coords = False, reduction_factor=1) :
-    with open(filename, 'rb') as f:
-        model = bv.read_as_3d_array(f, coords, reduction_factor)
-    return model
+def splitData(dataset, test_split) :
+    dataset_size = 0
+    for _ in dataset : dataset_size = dataset_size + 1
+    
+    train_size = int((1-test_split) * dataset_size)
+    test_size = int(test_split * dataset_size)
+    
+    shuffled_set = dataset.shuffle(100000)
+    train_dataset = shuffled_set.take(train_size)
+    test_dataset = shuffled_set.skip(train_size).take(test_size)
+    return train_dataset, test_dataset
 
-def loadBVVariable(filename, coords = False, target_vox_size=64) :
-    with open(filename, 'rb') as f:
-        model = bv.read_as_3d_array_variable(f, coords, target_vox_size)
-    return model
+def loadData(target_vox_size, max_loads_per_cat, vox_in_dir, cat_prefixes):    
+    # vox_fps = getMixedFPs(vox_in_dir, num_models_load, cat_prefixes)    
+    cat_vox_fps = [ [ os.path.join(cat, directory, 'models/model_normalized.solid.binvox') for directory in os.listdir(os.path.join(vox_in_dir, cat))] for cat in cat_prefixes ]    
+    voxs, mids = [], []
+    too_sparse_count = 0
+    grown_count = 0
+    
+    for i, vox_fps in enumerate(cat_vox_fps) :
+        index = 0
+        for _, file in tqdm(enumerate(vox_fps), unit_scale=True, desc='Loading {} cat {}/{}'.format(cat_prefixes[i], i+1, len(cat_prefixes)), total=min(max_loads_per_cat, len(vox_fps))):
+            fullpath = os.path.join(vox_in_dir, file)
+            try :        
+                vox = readBV(fullpath, target_vox_size = target_vox_size)
+                sparsity = getSparsity(vox)
+                if sparsity < .01 : 
+                    too_sparse_count = too_sparse_count + 1
+                    continue
+                if sparsity < .4 : 
+                    vox = growVox(vox, amount=.1)
+                    grown_count = grown_count + 1
+                vox = reduceVoxels(vox, target_vox_size)
+                vox = centerVox(vox)
+                vox = np.expand_dims(vox, axis=-1)
+                vox = np.bool8(vox)
+                voxs.append(vox)
+                mids.append(fullpath.split('/')[-3])
+                index = index + 1
+                if (index >= max_loads_per_cat) : break
+            except :
+                print('\nCould not load: ', fullpath)
+    
+    # voxs = np.stack(voxs, axis=0)
+    print('Done. Discared Sparse Models: {}   Grown Models: {}'.format(too_sparse_count, grown_count))
+    return voxs, mids
+
+def read_header(fp):
+    """ Read binvox header. Mostly meant for internal use.
+    """
+    line = fp.readline().strip()
+    if not line.startswith(b'#binvox'):
+        raise IOError('Not a binvox file')
+    dims = list(map(int, fp.readline().strip().split(b' ')[1:]))
+    translate = list(map(float, fp.readline().strip().split(b' ')[1:]))
+    scale = list(map(float, fp.readline().strip().split(b' ')[1:]))[0]
+    line = fp.readline()
+    return dims, translate, scale
+
+def readBV(filename, coords = False, target_vox_size=64) :
+    with open(filename, 'rb') as fp:
+        dims, translate, scale = read_header(fp)
+        raw_data = np.frombuffer(fp.read(), dtype=np.uint8)
+    
+        values, counts = raw_data[::2], raw_data[1::2]
+        data = np.repeat(values, counts).astype(np.bool)
+        data = data.reshape(dims)
+    return data
+
+def getJSON(json_fp, df=False) :
+    if (df) :
+        json_file = pd.read_json(json_fp)
+    else :
+        with open(json_fp, 'r') as json_file:
+            json_file = json.load(json_file)
+    return json_file
+
+tax = []
+def readTax(tax_fn = "/home/starstorms/Insight/ShapeNet/meta/taxonomy.json") :
+    global tax
+    tax = pd.read_json(tax_fn)
+    tax['numc'] = tax.apply (lambda row: len(row.children), axis=1)
+    return tax
+
+meta = []
+def readMeta(meta_fn = "/home/starstorms/Insight/ShapeNet/meta/dfmeta.csv") :
+    global meta
+    meta = pd.read_csv(meta_fn)
+    return meta
+
+def getMidCat(modelid) :
+    global meta
+    if (len(meta) < 2) :
+        meta = readMeta()
+    return meta.cat[meta.mid == modelid].to_numpy()[0]
+
+def getCats(labels_tensor, cf_cat_prefixes) :
+    output = ['0{}'.format(getMidCat(item.numpy().decode())) for item in labels_tensor]
+    outcats = [cf_cat_prefixes.index(item) if item in cf_cat_prefixes else len(cf_cat_prefixes) for item in output]
+    return tf.convert_to_tensor(outcats, dtype=tf.int32)
+
+def getCatName(catid) :
+    global tax
+    if (len(tax) == 0) :
+        tax = readTax()
+    return tax.name[tax.synsetId == int(catid)].to_numpy()[0]    
+
+def renameVoxs(vox_in_dir, prefix) :
+    for i, file in enumerate(os.listdir(vox_in_dir)) :
+        fullpath = os.path.join(vox_in_dir, file)
+        newpath = os.path.join(vox_in_dir, '{}_{:05d}.binvox'.format(prefix, i))
+        print(fullpath, '\n', newpath, '\n')
+        os.rename(fullpath, newpath)
+
+#%% 3D Model Functions
+def showBinvox(modelid, vox_in_dir = '/media/starstorms/DATA/Insight/ShapeNet/all') :
+    category = '0{}'.format(getMidCat(modelid))
+    fullpath = '{}/{}/{}/models/model_normalized.solid.binvox'.format(vox_in_dir, category, modelid)
+    subprocess.call('viewvox {}'.format(fullpath), shell=True)
+
+def showPic(modelid, title='', pic_in_dir='/home/starstorms/Insight/ShapeNet/renders') :
+    fullpath = os.path.join(pic_in_dir, modelid+'.png')
+    img = mpimg.imread(fullpath)
+    plt.suptitle(title)
+    plt.imshow(img)
+    plt.axis('off')
+    plt.show()
+
+def annoToMid(annoid) :
+    return meta[meta.annoid== annoid].mid.values[0]
 
 def makeOBJ(name, verts, faces) :
     F = open(name,'w+')    
@@ -100,14 +216,87 @@ def saveOBJs(model, voxs, out_folder, suffix) :
         verts, faces, normals, values = sm.marching_cubes_lewiner(vox, 0, step_size=1)
         makeOBJ('{}/{}{}.obj'.format(out_folder, suffix, i+1), verts, faces)
 
+def reduceVoxels(vox, target_vox_size) :
+    dim = vox.shape[0]
+    reduction_factor = int(dim/target_vox_size)
+    if (reduction_factor > 1) :
+        vox = vox[0::reduction_factor, 0::reduction_factor, 0::reduction_factor]
+    return vox
+
+def getSparsity(vox) :
+    vox = np.squeeze(np.array(vox))
+    vox = np.where(vox>0.5, 1, 0)
+    if (len(vox.shape)==3):
+        return np.sum(vox) / (vox.shape[1] ** 3)
+    if (len(vox.shape)==4):
+        result = np.squeeze(np.apply_over_axes(np.sum, vox, [1,2,3]))
+        return result / (vox.shape[1] ** 3)
+
+kernel = 'none'
+def makeGaussKernel() :
+    global kernel
+    sigma = 1.0
+    # x = np.arange(-3,4,1)
+    # y = np.arange(-3,4,1)
+    # z = np.arange(-3,4,1)
+    x = np.arange(-6,7,1)
+    y = np.arange(-6,7,1)
+    z = np.arange(-6,7,1)
+    xx, yy, zz = np.meshgrid(x,y,z)
+    kernel = np.exp(-(xx**2 + yy**2 + zz**2)/(2*sigma**2))
+
+def growVox(vox, amount=0.5) :
+    global kernel
+    if (kernel=='none') : makeGaussKernel()
+    blurred = signal.convolve(vox, kernel, mode="same")
+    blurred = np.where(blurred>amount, 1, 0)
+    return blurred
+
+def centerVox(voxin) :
+    voxel_max_size = voxin.shape[0]
+    vflatx = np.pad(np.max(np.max(voxin, axis=0), axis=1),1)
+    vflatz = np.pad(np.max(np.max(voxin, axis=2), axis=1),1)
+    
+    xmin, zmin, xmax, zmax = 0,0,0,0
+    for i in range(1,len(vflatx)) :
+        jump = round(vflatx[i])-round(vflatx[i-1])
+        if jump>0 : xmin = i
+        if jump<0 : xmax = i
+        
+    for i in range(1, len(vflatz)) :
+        jump = round(vflatz[i])-round(vflatz[i-1])
+        if jump>0 : zmin = i
+        if jump<0 : zmax = i
+    
+    xmin, xmax, zmin, zmax = xmin-1, xmax-1, zmin-1, zmax-1    
+    x_off = int((voxel_max_size-(xmax-xmin))/2) - xmin
+    z_off = int((voxel_max_size-(zmax-zmin))/2) - zmin
+    vcent = np.roll(voxin, x_off, axis=1)
+    vcent = np.roll(vcent, z_off, axis=0)
+    return vcent
+
+def getMetric(original_voxs, generated_voxs) :
+    return tf.reduce_mean(tf.keras.losses.mean_squared_error(original_voxs, generated_voxs)).numpy() * 1000
+
+def checkStopSignal(dir_path='/data/sn/all/'):
+    stop_path = os.path.join(dir_path, 'stop')
+    go_path = os.path.join(dir_path, 'go')
+    if (os.path.isdir(stop_path)):
+        os.rename(stop_path, go_path)
+        return True
+    else :
+        return False
+
 #%% Display Functions
+plot_out_dir = ''
+
 def plotMesh(verts, faces) :
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
     ax.plot_trisurf(verts[:, 0], verts[:,1], faces, verts[:, 2], linewidth=0.2, antialiased=True)
     plt.show()
     
-def plotVox(voxin, step=1, title='', threshold = 0.5, stats=False, limits=None, show_axes=True) :
+def plotVox(voxin, step=1, title='', threshold = 0.5, stats=False, limits=None, show_axes=True, save_fig=False, show_fig=True) :
     vox = np.squeeze(voxin)
     
     if (stats) :
@@ -129,7 +318,11 @@ def plotVox(voxin, step=1, title='', threshold = 0.5, stats=False, limits=None, 
         plt.hist(vox.flatten(), bins=10)
         plt.show()
         
-    verts, faces = createMesh(vox, step, threshold)
+    try :
+        verts, faces = createMesh(vox, step, threshold)
+    except :
+        print('Failed creating mesh for voxels.')
+        return
     
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
@@ -142,13 +335,17 @@ def plotVox(voxin, step=1, title='', threshold = 0.5, stats=False, limits=None, 
         ax.set_ylim(0, limits[1])
         ax.set_zlim(0, limits[2])
         
-    ax.plot_trisurf(verts[:, 0], verts[:,1], faces, verts[:, 2], linewidth=0.2, antialiased=True)
+    _ = ax.plot_trisurf(verts[:, 0], verts[:,1], faces, verts[:, 2], linewidth=0.2, antialiased=True)
     plt.suptitle(title)
-    plt.show()
+
+    global plot_out_dir   
+    if (save_fig) : _ = fig.savefig(os.path.join(plot_out_dir, title))
+    if (show_fig) : _ = plt.show()
+    return
 
 def createMesh(vox, step=1, threshold = 0.5) :   
     vox = np.pad(vox, step)
-    verts, faces, normals, values = sm.marching_cubes_lewiner(vox, 0.5, step_size=step)
+    verts, faces, normals, values = sm.marching_cubes_lewiner(vox, threshold, step_size=step)
     return verts, faces
   
 def showMesh(verts, faces, aspect=dict(x=1, y=1, z=1), plot_it=True) :
@@ -156,21 +353,20 @@ def showMesh(verts, faces, aspect=dict(x=1, y=1, z=1), plot_it=True) :
     if (plot_it) : plot(fig)
     return fig
     
-def showReconstruct(model, item, index = 0, show_original=True, show_reconstruct=True) :
-    xvox = item[index].numpy()[0,:,:,:,0]
-    xprobs = model.reconstruct(item)
-    predictions = xprobs.numpy()[0,:,:,:,0]
+def showReconstruct(model, samples, index = 0, title='', show_original=True, show_reconstruct=True, save_fig=False, limits=None) :
+    predictions = model.reconstruct(samples[index][None,...], training=False)
+    xvox = samples[index]
     
     if (np.max(predictions) < 0.5) :
         print('No voxels')
         return
     
-    if (show_original) : plotVox(xvox, step=1, title='Original', threshold=0.5, stats=False)  
-    if (show_reconstruct) : plotVox(predictions, step=1, title='Reconstruct', threshold=0.5, stats=False)
+    if (show_original) : plotVox(xvox, step=1, title='Original {}'.format(title), threshold=0.5, stats=False, save_fig=save_fig, limits=limits)  
+    if (show_reconstruct) : plotVox(predictions, step=1, title='Reconstruct {}'.format(title), threshold=0.5, stats=False, save_fig=save_fig, limits=limits)
     
 def startStreamlit(filepath) :
-    os.subprocess.call('streamlit run {}'.format(filepath), shell=True)
-    os.subprocess.call('firefox new-tab http://localhost:8501/')
+    subprocess.call('streamlit run {}'.format(filepath), shell=True)
+    subprocess.call('firefox new-tab http://localhost:8501/')
     
 def exportBinvoxes(in_dir, out_dir, obj_prefix, vox_size) :
     # Remove any .binvox files in directory
