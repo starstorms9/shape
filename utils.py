@@ -12,12 +12,12 @@ import random
 from tqdm import tqdm
 from scipy import signal
 
+import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import plotly.graph_objects as go
 from plotly.offline import plot
 import plotly.figure_factory as FF
-import matplotlib.cm as cm
 import tensorflow as tf
 
 #%% Global variables

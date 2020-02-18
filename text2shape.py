@@ -5,11 +5,13 @@ import tensorflow as tf
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 import numpy as np
 import pickle
-import matplotlib.pyplot as plt
 import random as rn
 import time
 import spacy
 from tqdm import tqdm
+
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
 
 import cvae as cv
 import utils as ut
@@ -204,14 +206,16 @@ def getVox(text) :
     return vox
 
 #%% Test text2shape model
-keyword = 'table'
-for i in range(100) :
+keyword = 'bowl'
+# ex_descs = []
+for i in range(10) :
     desc = dnp[np.random.randint(0,len(dnp))]
     while not keyword in desc :
         desc = dnp[np.random.randint(0,len(dnp))]
+    ex_descs.append(desc)
     print(desc)
     
-for i in range(20) :
+for i in range(20) :.
     text = input('Text description: ')
     vox = getVox(text)
     ut.plotVox(vox, limits=cf_limits)

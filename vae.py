@@ -29,7 +29,6 @@ import pickle
 from tqdm import tqdm
 
 import cvae as cv
-import binvox_rw as bv
 import utils as ut
 import logger
 
@@ -286,10 +285,10 @@ for i, vox in enumerate(journey_voxs) :
     ut.plotVox(vox, step=plot_step, limits = cf_limits, title='', show_axes=False)    
     
 #%% Sample for some starting points
-i = start_index
-for i in np.random.randint(0, len(shape2vec), size=10) :
-    vox = model.decode(shape2vec[mids[i]][None,...], apply_sigmoid=True)[0,...,0]    
-    ut.plotVox(vox, step=plot_step, limits = cf_limits, title=i)
+# i = start_index
+for i in np.random.randint(0, len(shape2vec), size=100) :
+    vox = shapemodel.decode(shape2vec[mids[i]][None,...], apply_sigmoid=True)[0,...,0]    
+    ut.plotVox(vox, step=2, limits = cf_limits, title=i)
     
 #%% Go on a directed trajectory
 model.training=False

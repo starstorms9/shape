@@ -48,9 +48,6 @@ latent_vects = np.zeros((len(shape2vec), latent_dim))
 for i, key in enumerate(shape2vec.keys()):
     latent_vects[i,:] = shape2vec[key]
 
-
-text_vects = 
-
 perp, lr = 40, 200
 tsne = TSNE(n_components=2, n_iter=1100, verbose=3, perplexity=perp, learning_rate=lr)
 lvects = tsne.fit_transform(latent_vects)

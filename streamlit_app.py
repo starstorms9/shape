@@ -4,9 +4,16 @@ import streamlit as st
 import plotly
 import re
 import time
+import pickle
+from scipy import spatial
 import skimage.measure as sm
+
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+import seaborn as sns
+
 import plotly.express as px
 import plotly.graph_objects as go
 import plotly.figure_factory as FF
@@ -15,6 +22,7 @@ import os
 import tensorflow as tf
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 import spacy
+import random as rn
 
 import cvae as cv
 import utils as ut
@@ -38,7 +46,7 @@ def setWideModeHack():
 
 @st.cache
 def loadTSNEData2D(axes='2d') :
-    return pd.read_csv('data/df_sl_2d.csv')
+    return pd.read_csv(os.path.join(os.getcwd(),'data/df_sl_2d.csv'))
 
 @st.cache
 def getTSNE2DData() :
@@ -50,18 +58,33 @@ def getTSNE2DData() :
     df_tsne.columns = named_cols
     return df_tsne    
 
+@st.cache
+def loadExampleDescriptions() :
+    example_descriptions = np.load(os.path.join(os.getcwd(), 'data/exdnp.npy'))
+    return example_descriptions
+
+@st.cache
+def loadShape2Vec() :
+    infile = open(os.path.join(os.getcwd(), 'data/shape2vec.pkl'),'rb')
+    shape2vec = pickle.load(infile)
+    infile.close()
+    mids = list(shape2vec.keys())
+    vecs = np.array([shape2vec[m] for m in mids])
+    vec_tree = spatial.KDTree(vecs)
+    return shape2vec, mids, vecs, vec_tree
+
 @st.cache(allow_output_mutation=True)
 def makeShapeModel() :
-    model_in_dir = '/home/starstorms/Insight/shape/shape.git/models/autoencoder'
+    model_in_dir = os.path.join(os.getcwd(), 'models/autoencoder')
     shapemodel = cv.CVAE(128, 64, training=False)
     shapemodel.loadMyModel(model_in_dir, 195)
     return shapemodel
 
 @st.cache(allow_output_mutation=True)
 def makeTextModel() :
-    model_in_dir = '/home/starstorms/Insight/shape/shape.git/models/textencoder'
+    model_in_dir = os.path.join(os.getcwd(),'models/textencoder')
     textmodel = ts.TextSpacy(cf_latent_dim, max_length=cf_max_length, training=False)
-    textmodel.loadMyModel(model_in_dir, 5669)
+    textmodel.loadMyModel(model_in_dir, 6449)
     return textmodel
 
 @st.cache(allow_output_mutation=True)
@@ -82,7 +105,27 @@ def getVox(text, shapemodel, textmodel, nlp) :
     return vox
 
 def conditionTextInput(text) :
-    return text
+    replacements = {
+    ',' : '',
+    '  ' : ' ',
+    'its' : 'it is',
+    'an' : 'a',
+    'doesnt' : 'does not',
+    '1' : 'one',
+    '2' : 'two',
+    '3' : 'three',
+    '4' : 'four',
+    '5' : 'five',
+    '6' : 'six',
+    '7' : 'seven',
+    '8' : 'eight',
+    '9' : 'nine',
+    }
+    
+    desc = text.lower().strip()
+    for fix in replacements.keys() :
+        desc = desc.replace(fix, replacements[fix])
+    return desc
 
 def addThumbnailSelections(df_tsne) :
     pic_in_dir='/home/starstorms/Insight/ShapeNet/renders'
@@ -97,6 +140,21 @@ def addThumbnailSelections(df_tsne) :
         fullpath = os.path.join(pic_in_dir, modelid+'.png')
         img = mpimg.imread(fullpath)
         st.sidebar.image(img)
+
+def getStartVects() :
+    sindices = {
+        'Table'  : [7764, 6216, 3076, 2930, 7906, 715, 10496, 11358, 12722, 13475, 9348, 13785, 11697, 3165],
+        'Chair'  : [9479, 13872, 12775, 9203, 9682, 9062, 8801, 8134],
+        'Lamp'   : [15111, 15007, 14634, 14646, 15314, 14485],
+        'Faucet' : [15540, 15684, 15535, 15738, 15412],
+        'Clock'  : [16124, 16034, 16153],
+        'Bottle' : [16690, 16736, 16689],
+        'Vase'   : [17463, 17484, 17324, 17224, 17453],
+        'Laptop' : [17780, 17707, 17722],
+        'Bed'    : [18217, 18161],
+        'Mug'    : [18309, 18368, 18448],
+        'Bowl'   : [18501, 17287, 18545, 18479, 18498]}
+    return sindices
 
 def createMesh(vox, step=1, threshold = 0.5) :    
     vox = np.pad(vox, step)
@@ -114,6 +172,30 @@ def showMesh(verts, faces, aspect=dict(x=1, y=1, z=1), plot_it=True, title='') :
     margin=dict(r=20, l=10, b=10, t=10))
     return fig
 
+def plotVox(voxin, step=1, title='', tsnedata=None) :       
+    try :
+        verts, faces = createMesh(voxin, step)
+    except :
+        st.write('Failed creating mesh for voxels.')
+        return
+    
+    fig = plt.figure(figsize=(14, 8))
+    ax = fig.add_subplot(111, projection='3d')
+    ax.axis('off')
+    ax.set_xlim(0, cf_vox_size)
+    ax.set_ylim(0, cf_vox_size)
+    ax.set_zlim(0, cf_vox_size)
+    ax.plot_trisurf(verts[:, 0], verts[:,1], faces, verts[:, 2], linewidth=0.2, antialiased=True)
+    
+    fig.canvas.draw()
+    data = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
+    data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+
+    # bright=["#023EFF","#FF7C00","#1AC938","#E8000B","#8B2BE2","#9F4800","#F14CC1","#A3A3A3","#000099","#00D7FF","#222A2A"]    
+    # ax = fig.add_subplot(122)
+    # sns.scatterplot(data=tsnedata, x='tsne1', y='tsne2', hue='Category', s=10, linewidth=0, palette='bright')    
+    return data
+
 #%% Setup main methods
 def text2Shape() :
     st.write('Text 2 shape')
@@ -126,7 +208,14 @@ def text2Shape() :
     textmodel = makeTextModel()
     loading_text.text('Models done being made!')
     
-    description = st.text_input('Shape Description:', value='a regular chair. it has four legs.')
+    # random_desc = st.sidebar.button('Load random description')
+    # st.write(random_desc)
+    # if random_desc : 
+    #     example_descriptions = loadExampleDescriptions()
+    #     description = rn.choice(example_descriptions)
+    # else :
+    description = st.text_input('Enter Shape Description:', value='a regular chair. it has four legs.')
+    description = conditionTextInput(description)
     vox = getVox(description, shapemodel, textmodel, vocab)
     
     verts, faces = createMesh(vox, step=1)
@@ -172,8 +261,55 @@ def vectExplore() :
     addThumbnailSelections(df_tsne)
 
 def shapetime() :
-    st.write('Shapetime journeys')
+    st.write('Shapetime Journeys')
+    cat_options = ['Table','Chair','Lamp','Faucet','Clock','Bottle','Vase','Laptop','Bed','Mug','Bowl']        
+    starting_cat = st.sidebar.selectbox('Choose starting shape:', cat_options)
+    start_indices = getStartVects()
+    start_index = rn.choice(start_indices[starting_cat])    
+    df_tsne = getTSNE2DData()
     
+    vects_sample = st.sidebar.number_input('Variety of samples (higher --> diverse)', value=200, min_value=10, max_value=1000, step=5)
+    max_dist = 8
+    interp_points = 8
+    plot_step = 2
+    
+    shapemodel = makeShapeModel()
+    shape2vec, mids, vecs, vec_tree = loadShape2Vec()
+    empty = st.empty()
+    
+    start_vect = shape2vec[mids[start_index]]
+    visited_indices = [start_index]
+    while True :
+        journey_vecs = []
+        journey_mids = []
+        journey_mids.append(mids[start_index])
+        for i in range(8) :
+            n_dists, close_ids = vec_tree.query(start_vect, k = vects_sample, distance_upper_bound=max_dist)
+            if len(shape2vec) in close_ids :
+                n_dists, close_ids = vec_tree.query(start_vect, k = vects_sample, distance_upper_bound=max_dist*3)    
+            close_ids = list(close_ids)
+            
+            visited_indices = visited_indices[:100]            
+            for index in sorted(close_ids, reverse=True):
+                if index in visited_indices:
+                    close_ids.remove(index)
+            
+            next_index = rn.choice(close_ids)
+            next_vect = vecs[next_index]
+            visited_indices.append(next_index)
+            interp_vects = ut.interp(next_vect, start_vect, divs = interp_points)
+            journey_vecs.extend(interp_vects)
+            start_vect = next_vect
+            journey_mids.append(mids[next_index])
+            
+        journey_voxs = np.zeros(( len(journey_vecs), cf_vox_size, cf_vox_size, cf_vox_size))
+        for i, vect in enumerate(journey_vecs) :
+            journey_voxs[i,...] = shapemodel.decode(vect[None,...], apply_sigmoid=True)[0,...,0]
+        
+        for i, vox in enumerate(journey_voxs) :
+            data = plotVox(vox, step=plot_step, tsnedata=df_tsne)
+            empty.image(data)
+        
 def manual() :
     st.write('This is the manual')
 
