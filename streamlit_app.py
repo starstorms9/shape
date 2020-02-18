@@ -21,7 +21,6 @@ import utils as ut
 import logger
 import textspacy as ts
 
-
 #%% Global setup variables
 cf_vox_size = 64
 cf_latent_dim = 128
