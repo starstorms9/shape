@@ -4,30 +4,28 @@ import os
 import subprocess
 # if (not os.path.isdir('/data/sn/all')) : subprocess.call('sync_scripts.sh', shell=True)
 
-from sys import getsizeof
 import skimage.measure as sm
 import time
 import json
 import pandas as pd
 import random
-from tqdm import trange, tqdm
+from tqdm import tqdm
 from scipy import signal
-
-import binvox_rw as bv
 
 import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
-from mpl_toolkits.mplot3d import Axes3D
 import plotly.graph_objects as go
 from plotly.offline import plot
 import plotly.figure_factory as FF
 import matplotlib.cm as cm
-# from pandas_ods_reader import read_ods
-
 import tensorflow as tf
 
-#%%
+#%% Global variables
 dfmeta_fp = '/data/sn/all/meta/dfmeta.csv'
+plot_out_dir = ''
+tax = []
+meta = []
+kernel = 'none'
 
 #%% Basic Functions
 def minmax(arr) :
@@ -145,14 +143,12 @@ def getJSON(json_fp, df=False) :
             json_file = json.load(json_file)
     return json_file
 
-tax = []
 def readTax(tax_fn = "/home/starstorms/Insight/ShapeNet/meta/taxonomy.json") :
     global tax
     tax = pd.read_json(tax_fn)
     tax['numc'] = tax.apply (lambda row: len(row.children), axis=1)
     return tax
 
-meta = []
 def readMeta(meta_fn = "/home/starstorms/Insight/ShapeNet/meta/dfmeta.csv") :
     global meta
     meta = pd.read_csv(meta_fn)
@@ -232,7 +228,6 @@ def getSparsity(vox) :
         result = np.squeeze(np.apply_over_axes(np.sum, vox, [1,2,3]))
         return result / (vox.shape[1] ** 3)
 
-kernel = 'none'
 def makeGaussKernel() :
     global kernel
     sigma = 1.0
@@ -288,8 +283,6 @@ def checkStopSignal(dir_path='/data/sn/all/'):
         return False
 
 #%% Display Functions
-plot_out_dir = ''
-
 def plotMesh(verts, faces) :
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
