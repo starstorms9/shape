@@ -1,8 +1,12 @@
+import subprocess
+subprocess.call('conda config --append channels conda-forge', shell=True)
+
 import numpy as np
 import pandas as pd
 import streamlit as st
 import plotly
 import re
+import time
 import pickle
 from scipy import spatial
 import skimage.measure as sm
@@ -11,18 +15,22 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+import seaborn as sns
+
 
 import plotly.express as px
+import plotly.graph_objects as go
 import plotly.figure_factory as FF
+import altair as alt
 import os
 import tensorflow as tf
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 import spacy
-import en_core_web_md
-
 import random as rn
 
 import cvae as cv
+import utils as ut
+import logger
 import textspacy as ts
 
 #%% Global setup variables
@@ -85,7 +93,7 @@ def makeTextModel() :
 
 @st.cache(allow_output_mutation=True)
 def getSpacy() :
-    nlp = en_core_web_md.load(parser=False, tagger=False, entity=False)
+    nlp = spacy.load('en_core_web_md', entity=False)
     return nlp.vocab
 
 def padEnc(text, vocab) :
@@ -192,14 +200,6 @@ def plotVox(voxin, step=1, title='', tsnedata=None) :
     # sns.scatterplot(data=tsnedata, x='tsne1', y='tsne2', hue='Category', s=10, linewidth=0, palette='bright')    
     return data
 
-def interp(vec1, vec2, divs=5, include_ends=True) :
-    out = []
-    amounts = np.array(range(divs+1))/divs if include_ends else np.array(range(1, divs))/divs
-    for amt in amounts :
-        interpolated_vect = vec1 * amt + vec2 * (1-amt)
-        out.append( interpolated_vect )
-    return np.stack(out)
-
 #%% Setup main methods
 def text2Shape() :
     st.write('Text 2 shape')
@@ -301,7 +301,7 @@ def shapetime() :
             next_index = rn.choice(close_ids)
             next_vect = vecs[next_index]
             visited_indices.append(next_index)
-            interp_vects = interp(next_vect, start_vect, divs = interp_points)
+            interp_vects = ut.interp(next_vect, start_vect, divs = interp_points)
             journey_vecs.extend(interp_vects)
             start_vect = next_vect
             journey_mids.append(mids[next_index])
