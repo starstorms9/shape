@@ -2,7 +2,6 @@
 import os
 import pandas as pd
 import tensorflow as tf
-from tensorflow.keras.preprocessing.text import Tokenizer
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 import numpy as np
 import pickle
@@ -11,15 +10,12 @@ import random as rn
 import time
 import spacy
 from tqdm import tqdm
-import string
-import math
 
 import cvae as cv
 import utils as ut
 import logger
 import textspacy as ts
 
-from scipy import spatial
 np.set_printoptions(precision=3, suppress=True)
 remote = os.path.isdir('/data/sn/all')
 
@@ -52,19 +48,7 @@ def get_embeddings(vocab):
 nlp = spacy.load('en_core_web_md', entity=False)
 embeddings = get_embeddings(nlp.vocab)
 elayer = tf.keras.layers.Embedding(embeddings.shape[0], embeddings.shape[1], weights=[embeddings], input_length=cf_max_length, trainable=False)
-     
-#%%
-corpus = set()
-for desc in tqdm(all_descs, total=len(all_descs)) :
-    try:
-        for token in nlp(str(desc)) :
-            corpus.add(token.text)
-    except : print('failed')
-
-vocab = {}
-for word in corpus :
-    vocab[nlp(word)[0].rank] = word
-            
+               
 #%% Encoding methods
 def padEnc(text) :
     texts = text if type(text) == list else [text]
@@ -129,7 +113,7 @@ for train_x, train_y in train_ds : pass
 for val_x, val_y in val_ds : pass
 
 #%% Make text model
-txtmodel = ts.TextSpacy(128, learning_rate=6e-4, max_length=cf_max_length, training=True, embeddings=embeddings)
+txtmodel = ts.TextSpacy(128, learning_rate=6e-4, max_length=cf_max_length, training=True) #, embeddings=embeddings)
 txtmodel.printMSums()
 txtmodel.model.compile(optimizer='adam', loss=tf.keras.losses.MeanSquaredError())
 loss_mean = tf.keras.metrics.Mean()

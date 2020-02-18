@@ -20,8 +20,8 @@ class TextSpacy(tf.keras.Model):
         
         model = tf.keras.Sequential()
         model.add(Embedding(spacy_embeddings.shape[0], spacy_embeddings.shape[1], input_length=max_length, trainable=False, weights=[spacy_embeddings] ) )
-        model.add(SpatialDropout1D(self.dropoutRate))
-        model.add(Bidirectional(LSTM(128, return_sequences=True, kernel_regularizer=regularizers.l2(0.001))))
+        model.add(SpatialDropout1D(self.dropoutRate))     
+        model.add(Bidirectional(LSTM(64, return_sequences=True, kernel_regularizer=regularizers.l2(0.001))))
         model.add(Dropout(self.dropoutRate))
         model.add(Bidirectional(LSTM(128, return_sequences=True, kernel_regularizer=regularizers.l2(0.001))))
         model.add(Dropout(self.dropoutRate))
@@ -33,9 +33,7 @@ class TextSpacy(tf.keras.Model):
         model.add(Dropout(self.dropoutRate))
         model.add(Dense(256, activation='relu', kernel_regularizer=regularizers.l2(0.001)))
         model.add(Dropout(self.dropoutRate))
-        model.add(Dense(128, activation='relu', kernel_regularizer=regularizers.l2(0.001)))
-        model.add(Dropout(self.dropoutRate))
-        model.add(Dense(latent_dim, activation='linear'))
+        model.add(Dense(latent_dim, activation='linear'))    
         self.model = model
     
     def __call__(self, text) :

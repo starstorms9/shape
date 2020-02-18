@@ -3,6 +3,7 @@ import tensorflow as tf
 from tensorflow.keras.layers import Dense, Conv3D, Conv3DTranspose, InputLayer, Flatten, Reshape, BatchNormalization, Dropout
 from tensorflow.keras import regularizers
 import numpy as np
+import os
 
 #%% VAE Class
 class CVAE(tf.keras.Model):
@@ -137,4 +138,12 @@ class CVAE(tf.keras.Model):
         print("\nGenerative Net Summary:")
         print(self.gen_model.input_shape)
         print(self.gen_model.output_shape)
+        
+    def saveMyModel(self, dir_path, epoch):        
+        self.enc_model.save_weights(os.path.join(dir_path, 'enc_epoch_{}.h5'.format(epoch)))
+        self.gen_model.save_weights(os.path.join(dir_path, 'dec_epoch_{}.h5'.format(epoch)))
+        
+    def loadMyModel(self, dir_path, epoch):        
+        self.enc_model.load_weights(os.path.join(dir_path, 'enc_epoch_{}.h5'.format(epoch)))
+        self.gen_model.load_weights(os.path.join(dir_path, 'dec_epoch_{}.h5'.format(epoch)))
         

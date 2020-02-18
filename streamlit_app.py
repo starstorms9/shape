@@ -48,7 +48,7 @@ def getTSNE2DData() :
                   'Sub Categories', 'Description', 'Details', 'Length', 'Height', 'Width', 'Squareness',
                   'Class Length', 'Class Height', 'Class Width', 'Class Square', 'Loss', 'Log Loss']
     df_tsne.columns = named_cols
-    return df_tsne
+    return df_tsne    
 
 @st.cache(allow_output_mutation=True)
 def makeShapeModel() :
@@ -87,18 +87,18 @@ def conditionTextInput(text) :
 def addThumbnailSelections(df_tsne) :
     pic_in_dir='/home/starstorms/Insight/ShapeNet/renders'
     if not os.path.isdir(pic_in_dir) : return
-
+    
     annoid_input = st.sidebar.text_input('Anno ID to view')
     if len(annoid_input) > 1 :
         annosinspect = [annoid.strip().replace("'", "").replace("[", "").replace("]", "") for annoid in re.split(',',annoid_input) if len(annoid) > 1]
         modelid = df_tsne[df_tsne['Anno ID'] == int(annosinspect[0])]['Model ID'].values[0]
-
+        
         pic_in_dir='/home/starstorms/Insight/ShapeNet/renders'
         fullpath = os.path.join(pic_in_dir, modelid+'.png')
         img = mpimg.imread(fullpath)
         st.sidebar.image(img)
 
-def createMesh(vox, step=1, threshold = 0.5) :
+def createMesh(vox, step=1, threshold = 0.5) :    
     vox = np.pad(vox, step)
     verts, faces, normals, values = sm.marching_cubes_lewiner(vox, 0.5, step_size=step)
     return verts, faces
@@ -125,27 +125,27 @@ def text2Shape() :
     loading_text.text('Making shape generator model...')
     textmodel = makeTextModel()
     loading_text.text('Models done being made!')
-
+    
     description = st.text_input('Shape Description:', value='a regular chair. it has four legs.')
     vox = getVox(description, shapemodel, textmodel, vocab)
-
+    
     verts, faces = createMesh(vox, step=1)
     fig = showMesh(verts, faces)
     st.write(fig)
 
 def vectExplore() :
     st.write('Vector exploration')
-
-    df_tsne = getTSNE2DData()
-    bright=["#023EFF","#FF7C00","#1AC938","#E8000B","#8B2BE2","#9F4800","#F14CC1","#A3A3A3","#000099","#00D7FF","#222A2A"]
+    
+    df_tsne = getTSNE2DData()    
+    bright=["#023EFF","#FF7C00","#1AC938","#E8000B","#8B2BE2","#9F4800","#F14CC1","#A3A3A3","#000099","#00D7FF","#222A2A"]    
     color_option = st.sidebar.selectbox("Color Data", ['Category', 'Length', 'Height', 'Width', 'Squareness', 'Class Length', 'Class Height', 'Class Width', 'Class Square', 'Log Loss'])
     size = st.sidebar.number_input('Plot Dot Size', value=6.0, min_value=0.1, max_value=30.0, step=1.0)
-
+    
     padding = 1.05
     xmin, xmax = df_tsne.tsne1.min(), df_tsne.tsne1.max()
     ymin, ymax = df_tsne.tsne2.min(), df_tsne.tsne2.max()
     xlims, ylims = [xmin*padding, xmax*padding], [ymin*padding, ymax*padding]
-
+    
     config={'scrollZoom': True, 'modeBarButtonsToRemove' : ['lasso2d','zoom2d']}
     fig = px.scatter(data_frame=df_tsne.dropna(), range_x = xlims, range_y = ylims,
                       hover_name='Category',
@@ -153,27 +153,27 @@ def vectExplore() :
                       size='Width',
                       x='tsne1', y='tsne2', color=color_option, color_discrete_sequence=bright, width=1400, height=900)
     fig.update_traces(marker= dict(size=size, opacity=0.7, line=dict(width=0.1))) # size=2.3
-
+    
     midslist = list(df_tsne['Model ID'])
     mids_input = st.sidebar.text_area('Model IDs (comma separated)')
     midsinspect = [mid.strip().replace("'", "").replace("[", "").replace("]", "") for mid in re.split(',',mids_input) if len(mid) > 20]
     some_found = False
-    for mid in midsinspect :
+    for mid in midsinspect : 
         found = (mid in midslist)
         some_found = some_found or found
         if not found : st.sidebar.text('{} \n Not Found'.format(mid))
-
+    
     if (some_found) :
         midpoints = [[df_tsne.tsne1[midslist.index(mid)], df_tsne.tsne2[midslist.index(mid)]] for mid in midsinspect if (mid in midslist)]
         dfline = pd.DataFrame( midpoints, columns=['x','y'])
         fig.add_scatter(name='Between Models', text=dfline.index.values.tolist(), mode='lines+markers', x=dfline.x, y=dfline.y, line=dict(width=5), marker=dict(size=10, opacity=1.0, line=dict(width=5)) )
-
-    st.write(fig)
+    
+    st.write(fig)    
     addThumbnailSelections(df_tsne)
 
 def shapetime() :
     st.write('Shapetime journeys')
-
+    
 def manual() :
     st.write('This is the manual')
 
