@@ -12,7 +12,6 @@ attrs==19.3.0=py_0
 autopep8==1.4.4=py_0
 babel==2.8.0=py_0
 backcall==0.1.0=py37_0
-base58
 blas==1=mkl
 bleach==3.1.0=py37_0
 blinker
@@ -23,12 +22,10 @@ c-ares==1.15.0=h7b6447c_1001
 ca-certificates
 cachetools
 cairo==1.14.12=h8948797_3
-catalogue
 certifi
 cffi==1.13.2=py37h2e261b9_0
 chardet==3.0.4=py37_1003
 click==7=py37_0
-clipboard
 cloudpickle==1.2.2=py_0
 cryptography==2.8=py37h1ba5d50_0
 cudatoolkit==10.0.130=0
@@ -36,7 +33,6 @@ cudnn==7.6.5=cuda10.0_0
 cupti==10.0.130=0
 cycler==0.10.0=py37_0
 cymem
-cython-blis
 cytoolz
 dbus==1.13.12=h746ee38_0
 decorator==4.4.1=py_0
@@ -44,14 +40,9 @@ defusedxml==0.6.0=py_0
 diff-match-patch==20181111=py_0
 dill==0.3.1.1=py37_0
 docutils==0.15.2=py37_0
-easy-tf-log
-easydict
 en-core-web-md
-en-core-web-sm
 entrypoints==0.3=py37_0
-enum-compat
 expat==2.2.6=he6710b0_0
-ezodf
 ffmpeg==4=hcdf2ecd_0
 flake8==3.7.9=py37_0
 flask==1.1.1=py_0
@@ -148,7 +139,6 @@ openssl
 opt_einsum==3.1.0=py_0
 packaging==20=py_0
 pandas==0.25.3=py37he6710b0_0
-pandas-ods-reader
 pandoc==2.2.3.2=0
 pandocfilters==1.4.2=py37_1
 pango==1.42.4=h049681c_0
@@ -178,13 +168,11 @@ pyasn1
 pyasn1-modules
 pycodestyle==2.5.0=py37_0
 pycparser==2.19=py37_0
-pydeck
 pydocstyle==4.0.1=py_0
 pydot==1.4.1=py37_0
 pyflakes==2.1.1=py37_0
 pygments==2.5.2=py_0
 pylint==2.4.4=py37_0
-pynrrd
 pyopenssl==19.1.0=py37_0
 pyparsing==2.4.6=py_0
 pyqt==5.9.2=py37h05f1152_2
@@ -233,7 +221,6 @@ sphinxcontrib-jsmath==1.0.1=py_0
 sphinxcontrib-qthelp==1.0.2=py_0
 sphinxcontrib-serializinghtml==1.1.3=py_0
 sqlite==3.30.1=h7b6447c_0
-srsly
 statsmodels==0.10.1=py37hdd07704_0
 tensorflow==2.0.0=gpu_py37h768510d_0
 tensorflow-base==2.0.0=gpu_py37h0ec5d1f_0
@@ -252,8 +239,6 @@ traitlets==4.3.3=py37_0
 tzlocal
 ujson==1.35=py37h14c3975_0
 urllib3==1.25.7=py37_0
-validators
-wasabi
 watchdog==0.9.0=py37_1
 wcwidth==0.1.7=py37_0
 webencodings==0.5.1=py37_1
