@@ -22,7 +22,6 @@ dask==2.10.1
 decorator==4.4.1
 defusedxml==0.6.0
 docutils==0.15.2
-en-core-web-md==2.2.5
 entrypoints==0.3
 enum-compat==0.0.3
 future==0.18.2
