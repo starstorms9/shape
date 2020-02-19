@@ -407,6 +407,11 @@ def manual() :
     couch_gif = os.path.join(os.getcwd(), 'media/couches.gif')
     img = mpimg.imread(couch_gif)
     st.image(img)
+    
+    # Putting these here so they start being made and cached while reading the manual
+    vocab = getSpacy()
+    shapemodel = makeShapeModel()
+    textmodel = makeTextModel()
 
 #%% Main selector system
 modeOptions = ['Manual', 'Text to Shape', 'Latent Vect Exploration', 'Shape Interpolation']
