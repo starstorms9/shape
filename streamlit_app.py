@@ -13,8 +13,6 @@ import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-# en-core-web-md
-
 import plotly.express as px
 import plotly.graph_objects as go
 import plotly.figure_factory as FF
