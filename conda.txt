@@ -38,7 +38,7 @@ dbus==1.13.12=h746ee38_0
 decorator==4.4.1=py_0
 defusedxml==0.6.0=py_0
 diff-match-patch==20181111=py_0
-dill==0.3.1.1=py37_0
+dill
 docutils==0.15.2=py37_0
 entrypoints==0.3=py37_0
 expat==2.2.6=he6710b0_0
