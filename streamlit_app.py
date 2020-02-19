@@ -1,6 +1,8 @@
+import streamlit as st
+st.write("Importing libraries...")
+
 import numpy as np
 import pandas as pd
-import streamlit as st
 import plotly
 import re
 import time
