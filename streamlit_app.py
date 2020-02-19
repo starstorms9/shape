@@ -12,7 +12,6 @@ import matplotlib.pyplot as plt
 import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
-import seaborn as sns
 
 # en-core-web-md
 
@@ -27,8 +26,6 @@ import spacy
 import random as rn
 
 import cvae as cv
-import utils as ut
-import logger
 import textspacy as ts
 
 #%% Global setup variables
@@ -93,6 +90,14 @@ def makeTextModel() :
 def getSpacy() :
     nlp = spacy.load('en_core_web_md', entity=False)
     return nlp.vocab
+
+def interp(vec1, vec2, divs=5, include_ends=True) :
+    out = []
+    amounts = np.array(range(divs+1))/divs if include_ends else np.array(range(1, divs))/divs
+    for amt in amounts :
+        interpolated_vect = vec1 * amt + vec2 * (1-amt)
+        out.append( interpolated_vect )
+    return np.stack(out)
 
 def padEnc(text, vocab) :
     texts = text if type(text) == list else [text]
@@ -299,7 +304,7 @@ def shapetime() :
             next_index = rn.choice(close_ids)
             next_vect = vecs[next_index]
             visited_indices.append(next_index)
-            interp_vects = ut.interp(next_vect, start_vect, divs = interp_points)
+            interp_vects = interp(next_vect, start_vect, divs = interp_points)
             journey_vecs.extend(interp_vects)
             start_vect = next_vect
             journey_mids.append(mids[next_index])
