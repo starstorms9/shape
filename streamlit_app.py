@@ -88,7 +88,7 @@ def makeTextModel() :
 
 @st.cache(allow_output_mutation=True)
 def getSpacy() :
-    nlp = spacy.load('en_core_web_md', entity=False)
+    nlp = spacy.load("en_core_web_md", parser=False, tagger=False, entity=False)
     return nlp.vocab
 
 def interp(vec1, vec2, divs=5, include_ends=True) :

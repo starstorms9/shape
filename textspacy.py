@@ -1,7 +1,6 @@
 #%% Imports
 import tensorflow as tf
 import spacy
-import en_core_web_md
 from tensorflow.keras.layers import Dense, InputLayer, Flatten, Reshape, BatchNormalization, GRU, LSTM, Bidirectional, Embedding, Dropout, SpatialDropout1D, Conv1D, GlobalMaxPooling1D
 from tensorflow.keras import regularizers
 import numpy as np
@@ -41,7 +40,8 @@ class TextSpacy(tf.keras.Model):
         return self.model(text)
     
     def get_embeddings(self):
-        nlp = en_core_web_md.load(parser=False, tagger=False, entity=False)
+        # nlp = en_core_web_md.load(parser=False, tagger=False, entity=False)
+        nlp = spacy.load("en_core_web_md", parser=False, tagger=False, entity=False)
         vocab = nlp.vocab
         max_rank = max(lex.rank for lex in vocab if lex.has_vector)
         vectors = np.ndarray((max_rank+1, vocab.vectors_length), dtype='float32')
