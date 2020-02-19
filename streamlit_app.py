@@ -1,3 +1,6 @@
+import subprocess
+subprocess.call('python -m spacy download en_core_web_md', shell=True)
+
 import numpy as np
 import pandas as pd
 import streamlit as st
