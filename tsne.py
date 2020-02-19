@@ -15,7 +15,6 @@ import pickle
 from tqdm import tqdm
 
 import cvae as cv
-import binvox_rw as bv
 import utils as ut
 import logger
 
@@ -77,9 +76,7 @@ for col in df_cols_to_increase :
 #%% Plot 2D tsne
 plt.rcParams['figure.figsize'] = (12, 8)
 sns.scatterplot(data=df_subset, x='tsne1', y='tsne2', hue='cattext', s=10, linewidth=0, palette='bright')
-
-#fig = lm.fig 
-#fig.suptitle('title', fontsize=12)
+plt.axis('off')
 
 #%% Plotly 2D tsne
 fig = px.scatter(data_frame=df_subset.dropna(), hover_data=['subcats', 'mid'], size='dz',

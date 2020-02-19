@@ -1,6 +1,6 @@
 import streamlit as st
-header = st.empty()
-header.text("Importing libraries...")
+header = st.title('')
+header.header("Importing libraries...")
 
 import numpy as np
 import pandas as pd
@@ -26,7 +26,6 @@ from tensorflow.keras.preprocessing.sequence import pad_sequences
 import spacy
 import random as rn
 
-
 import cvae as cv
 import textspacy as ts
 
@@ -45,11 +44,11 @@ def setWideModeHack():
     max_width_str = f"max-width: 2000px;"
     st.markdown( f""" <style> .reportview-container .main .block-container{{ {max_width_str} }} </style> """, unsafe_allow_html=True)
 
-@st.cache
+@st.cache(persist=True)
 def loadTSNEData2D(axes='2d') :
     return pd.read_csv(os.path.join(os.getcwd(),'data/df_sl_2d.csv'))
 
-@st.cache
+@st.cache(persist=True)
 def getTSNE2DData() :
     df_tsne = loadTSNEData2D()
     df_tsne = df_tsne[df_tsne.columns.drop(list(df_tsne.filter(regex='Unnamed:')))]
@@ -59,12 +58,12 @@ def getTSNE2DData() :
     df_tsne.columns = named_cols
     return df_tsne    
 
-@st.cache
+@st.cache(persist=True)
 def loadExampleDescriptions() :
     example_descriptions = np.load(os.path.join(os.getcwd(), 'data/exdnp.npy'))
-    return example_descriptions
+    return list(example_descriptions)
 
-@st.cache
+@st.cache(persist=True, show_spinner=False)
 def loadShape2Vec() :
     infile = open(os.path.join(os.getcwd(), 'data/shape2vec.pkl'),'rb')
     shape2vec = pickle.load(infile)
@@ -74,21 +73,21 @@ def loadShape2Vec() :
     vec_tree = spatial.KDTree(vecs)
     return shape2vec, mids, vecs, vec_tree
 
-@st.cache(allow_output_mutation=True)
+@st.cache(allow_output_mutation=True, persist=True)
 def makeShapeModel() :
     model_in_dir = os.path.join(os.getcwd(), 'models/autoencoder')
     shapemodel = cv.CVAE(128, 64, training=False)
     shapemodel.loadMyModel(model_in_dir, 195)
     return shapemodel
 
-@st.cache(allow_output_mutation=True)
+@st.cache(allow_output_mutation=True, persist=True)
 def makeTextModel() :
     model_in_dir = os.path.join(os.getcwd(),'models/textencoder')
     textmodel = ts.TextSpacy(cf_latent_dim, max_length=cf_max_length, training=False)
     textmodel.loadMyModel(model_in_dir, 6449)
     return textmodel
 
-@st.cache(allow_output_mutation=True)
+@st.cache(allow_output_mutation=True, persist=True)
 def getSpacy() :
     nlp = spacy.load("en_core_web_md", parser=False, tagger=False, entity=False)
     return nlp.vocab
@@ -223,7 +222,8 @@ def plotVox(voxin, step=1, title='', tsnedata=None) :
 
 #%% Setup main methods
 def text2Shape() :
-    header.text('Text 2 shape')
+    setWideModeHack()
+    header.title('Text 2 shape')
     loading_text = st.empty()
     loading_text.text('Getting Spacy Embeddings...')
     vocab = getSpacy()
@@ -233,12 +233,6 @@ def text2Shape() :
     textmodel = makeTextModel()
     loading_text.text('Models done being made!')
     
-    # random_desc = st.sidebar.button('Load random description')
-    # st.write(random_desc)
-    # if random_desc : 
-    #     example_descriptions = loadExampleDescriptions()
-    #     description = rn.choice(example_descriptions)
-    # else :
     description = st.text_input('Enter Shape Description:', value='a regular chair. it has four legs.')
     description = conditionTextInput(description)
     vox = getVox(description, shapemodel, textmodel, vocab)
@@ -248,7 +242,8 @@ def text2Shape() :
     st.write(fig)
 
 def vectExplore() :
-    header.text('Vector exploration')
+    setWideModeHack()
+    header.title('Vector exploration')
     
     df_tsne = getTSNE2DData()    
     bright=["#023EFF","#FF7C00","#1AC938","#E8000B","#8B2BE2","#9F4800","#F14CC1","#A3A3A3","#000099","#00D7FF","#222A2A"]    
@@ -273,7 +268,8 @@ def vectExplore() :
     addThumbnailSelections(df_tsne)
 
 def shapetime() :
-    header.text('Shapetime Journeys')
+    setWideModeHack()
+    header.title('Shape Interpolations')
     cat_options = ['Table','Chair','Lamp','Faucet','Clock','Bottle','Vase','Laptop','Bed','Mug','Bowl']        
     starting_cat = st.sidebar.selectbox('Choose starting shape:', cat_options)
     start_indices = getStartVects()
@@ -282,7 +278,7 @@ def shapetime() :
     
     vects_sample = st.sidebar.number_input('Variety of samples (higher --> diverse)', value=200, min_value=10, max_value=1000, step=5)
     max_dist = 8
-    interp_points = 8
+    interp_points = 6
     plot_step = 2
     
     shapemodel = makeShapeModel()
@@ -295,7 +291,7 @@ def shapetime() :
         journey_vecs = []
         journey_mids = []
         journey_mids.append(mids[start_index])
-        for i in range(8) :
+        for i in range(5) :
             n_dists, close_ids = vec_tree.query(start_vect, k = vects_sample, distance_upper_bound=max_dist)
             if len(shape2vec) in close_ids :
                 n_dists, close_ids = vec_tree.query(start_vect, k = vects_sample, distance_upper_bound=max_dist*3)    
@@ -323,14 +319,99 @@ def shapetime() :
             empty.image(data)
         
 def manual() :
-    header.text('This is the manual')
-    manual_markdown = '# Streamlit App Manual /n Tabs: /n * Text to Shape /n * TSNE vector viewer /n  * Shape interpolations'
-    st.markdown(manual_markdown)
+    example_descriptions = loadExampleDescriptions()
+    header.title('Streamlit App Manual')
+    st.write(
+            """
+            This is my streamlit app for my Insight AI.SV.2020A project.
+            
+            ## Available Tabs:            
+            - ### Text to shape generator
+            - ### Latent vector exploration
+            - ### Shape interpolation
+            
+            ## Text to Shape Generator
+            This tab allows you to input a description and the generator will make a model based on that description.
+            The 3D plotly viewer generally works much faster in Firefox compared to chrome so use that if chrome is being slow.
+            
+            #### Models were trained on these object classes _(number of train examples)_:
+            - Table    (8436)
+            - Chair    (6778)
+            - Lamp     (2318)
+            - Faucet   (744)
+            - Clock    (651)
+            - Bottle   (498)
+            - Vase     (485)
+            - Laptop   (460)
+            - Bed      (233)
+            - Mug      (214)
+            - Bowl     (186)
+            """)
+            
+    if st.button('Click here to get some random example descriptions') :
+        descs = rn.sample(example_descriptions, 5)
+        for d in descs : st.write(d)
+        
+    st.write(
+            """    
+            ## Latent Vector Exploration
+            This tab shows the plot of the shape embedding vectors reduced from the full model dimensionality of 128 dimensions
+            down to 2 so they can be viewed easily. The method for dimensionality reduction was TSNE.
+            
+            #### In the exploration tab, there are several sidebar options:
+            - Color data
+                - This selector box sets what determines the color of the dots. (the class selections are particularly interesting!)
+            - Plot dot size
+                - This sets the dot size. Helpful when zooming in on a region.
+            - Model IDs             
+                - This allows for putting in multiple model IDs to see how they're connected on the graph.
+            
+            Additionally, using the plotly interface you can **double click** on a category in the legend to show only that
+            category of dots. Or **click once** to toggle showing that category. You can also zoom in on specific regions to
+            see local clustering in which case it may be useful to increase the plot dot size.
+            
+            The shape embeddings are very well clustered according to differt shape classes but also to sub categories
+            inside those classes. By playing with the color data, it can be seen that the clusters are also organized very strongly
+            by specific attributes about the object such as is it's overall width, length, or height.
+
+            ### TSNE map showing different colors for the different shape classes:            
+                """)
+          
+    tsne_pic = os.path.join(os.getcwd(), 'media/tsne_small.png')
+    img = mpimg.imread(tsne_pic)    
+    st.image(img)
+           
+    st.write(
+            """    
+            ## Shape Interpolation
+            This tab is just for fun and is intended to show how well the model can interpolate between various 
+            object models. Note that this runs the model many times and as such can be quite slow online. You may need to hit 'stop' 
+            and then 'rerun' from th menu in the upper right corner to make it behave properly.
+            
+            To generate these plots, the algorithm finds the nearest K shape embedding vectors
+            (K set by the variety parameter in the sidebar) and randomly picks one of them.
+            Then it interpolates between the current vector and the random new vector
+            and at every interpolated point it generates a new model from the interpolated latent space vector.
+            Then it repeats indefinitely finding new vectors as it goes.
+            
+            #### In this tab there are 2 sidebar options:
+            - Starting shape
+                - This sets the starting category for the algorithm but it will likely wander off into other categories
+                after a bit
+            - Variety parameter
+                - This determines the diversity of the models.
+        
+            ### Example pre-rendered gif below:
+                """)
+                
+    couch_gif = os.path.join(os.getcwd(), 'media/couches.gif')
+    img = mpimg.imread(couch_gif)
+    st.image(img)
 
 #%% Main selector system
-setWideModeHack()
-modeOptions = ['Text to Shape', 'Latent Vect Exploration', 'Shapetime Journey', 'Manual']
-mode = st.sidebar.selectbox("Select Mode:", modeOptions)
+modeOptions = ['Manual', 'Text to Shape', 'Latent Vect Exploration', 'Shape Interpolation']
+st.sidebar.header('Select Mode:')
+mode = st.sidebar.radio("", modeOptions, index=0)
 
-tabMethods = [text2Shape, vectExplore, shapetime, manual]
+tabMethods = [manual, text2Shape, vectExplore, shapetime]
 tabMethods[modeOptions.index(mode)]()
