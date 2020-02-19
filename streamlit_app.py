@@ -63,7 +63,7 @@ def loadExampleDescriptions() :
     example_descriptions = np.load(os.path.join(os.getcwd(), 'data/exdnp.npy'))
     return list(example_descriptions)
 
-@st.cache(persist=True, show_spinner=False)
+@st.cache(show_spinner=False)
 def loadShape2Vec() :
     infile = open(os.path.join(os.getcwd(), 'data/shape2vec.pkl'),'rb')
     shape2vec = pickle.load(infile)
@@ -348,7 +348,7 @@ def manual() :
             - Bowl     (186)
             """)
             
-    if st.button('Click here to get some random example descriptions') :
+    if st.button('-->Click here to get some random example descriptions<--') :
         descs = rn.sample(example_descriptions, 5)
         for d in descs : st.write(d)
         
@@ -406,7 +406,8 @@ def manual() :
                 
     couch_gif = os.path.join(os.getcwd(), 'media/couches.gif')
     img = mpimg.imread(couch_gif)
-    st.image(img)
+    gif_url = 'https://github.com/starstorms9/shape/blob/master/media/couches.gif?raw=true'
+    st.image(gif_url)
     
     # Putting these here so they start being made and cached while reading the manual
     vocab = getSpacy()

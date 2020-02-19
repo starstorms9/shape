@@ -215,7 +215,7 @@ for i in range(10) :
     ex_descs.append(desc)
     print(desc)
     
-for i in range(20) :.
+for i in range(20) :
     text = input('Text description: ')
     vox = getVox(text)
     ut.plotVox(vox, limits=cf_limits)
