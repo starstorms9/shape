@@ -84,7 +84,7 @@ def makeShapeModel() :
 def makeTextModel() :
     model_in_dir = os.path.join(os.getcwd(),'models/textencoder')
     textmodel = ts.TextSpacy(cf_latent_dim, max_length=cf_max_length, training=False)
-    textmodel.loadMyModel(model_in_dir, 6449)
+    textmodel.loadMyModel(model_in_dir, 10569)
     return textmodel
 
 @st.cache(allow_output_mutation=True, persist=True)
