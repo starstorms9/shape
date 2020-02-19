@@ -1,5 +1,6 @@
 import streamlit as st
-st.write("Importing libraries...")
+header = st.empty()
+header.text("Importing libraries...")
 
 import numpy as np
 import pandas as pd
@@ -149,6 +150,22 @@ def addThumbnailSelections(df_tsne) :
         img = mpimg.imread(fullpath)
         st.sidebar.image(img)
 
+def addMIDLines(df_tsne, fig) :
+    midslist = list(df_tsne['Model ID'])
+    mids_input = st.sidebar.text_area('Model IDs (comma separated)')
+    midsinspect = [mid.strip().replace("'", "").replace("[", "").replace("]", "") for mid in re.split(',',mids_input) if len(mid) > 20]
+    some_found = False
+    for mid in midsinspect : 
+        found = (mid in midslist)
+        some_found = some_found or found
+        if not found : st.sidebar.text('{} \n Not Found'.format(mid))
+    
+    if (some_found) :
+        midpoints = [[df_tsne.tsne1[midslist.index(mid)], df_tsne.tsne2[midslist.index(mid)]] for mid in midsinspect if (mid in midslist)]
+        dfline = pd.DataFrame( midpoints, columns=['x','y'])
+        fig.add_scatter(name='Between Models', text=dfline.index.values.tolist(), mode='lines+markers', x=dfline.x, y=dfline.y, line=dict(width=5), marker=dict(size=10, opacity=1.0, line=dict(width=5)) )
+    return
+
 def getStartVects() :
     sindices = {
         'Table'  : [7764, 6216, 3076, 2930, 7906, 715, 10496, 11358, 12722, 13475, 9348, 13785, 11697, 3165],
@@ -206,7 +223,7 @@ def plotVox(voxin, step=1, title='', tsnedata=None) :
 
 #%% Setup main methods
 def text2Shape() :
-    st.write('Text 2 shape')
+    header.text('Text 2 shape')
     loading_text = st.empty()
     loading_text.text('Getting Spacy Embeddings...')
     vocab = getSpacy()
@@ -231,7 +248,7 @@ def text2Shape() :
     st.write(fig)
 
 def vectExplore() :
-    st.write('Vector exploration')
+    header.text('Vector exploration')
     
     df_tsne = getTSNE2DData()    
     bright=["#023EFF","#FF7C00","#1AC938","#E8000B","#8B2BE2","#9F4800","#F14CC1","#A3A3A3","#000099","#00D7FF","#222A2A"]    
@@ -251,25 +268,12 @@ def vectExplore() :
                       x='tsne1', y='tsne2', color=color_option, color_discrete_sequence=bright, width=1400, height=900)
     fig.update_traces(marker= dict(size=size, opacity=0.7, line=dict(width=0.1))) # size=2.3
     
-    midslist = list(df_tsne['Model ID'])
-    mids_input = st.sidebar.text_area('Model IDs (comma separated)')
-    midsinspect = [mid.strip().replace("'", "").replace("[", "").replace("]", "") for mid in re.split(',',mids_input) if len(mid) > 20]
-    some_found = False
-    for mid in midsinspect : 
-        found = (mid in midslist)
-        some_found = some_found or found
-        if not found : st.sidebar.text('{} \n Not Found'.format(mid))
-    
-    if (some_found) :
-        midpoints = [[df_tsne.tsne1[midslist.index(mid)], df_tsne.tsne2[midslist.index(mid)]] for mid in midsinspect if (mid in midslist)]
-        dfline = pd.DataFrame( midpoints, columns=['x','y'])
-        fig.add_scatter(name='Between Models', text=dfline.index.values.tolist(), mode='lines+markers', x=dfline.x, y=dfline.y, line=dict(width=5), marker=dict(size=10, opacity=1.0, line=dict(width=5)) )
-    
+    addMIDLines(df_tsne, fig)
     st.write(fig)    
     addThumbnailSelections(df_tsne)
 
 def shapetime() :
-    st.write('Shapetime Journeys')
+    header.text('Shapetime Journeys')
     cat_options = ['Table','Chair','Lamp','Faucet','Clock','Bottle','Vase','Laptop','Bed','Mug','Bowl']        
     starting_cat = st.sidebar.selectbox('Choose starting shape:', cat_options)
     start_indices = getStartVects()
@@ -319,7 +323,9 @@ def shapetime() :
             empty.image(data)
         
 def manual() :
-    st.write('This is the manual')
+    header.text('This is the manual')
+    manual_markdown = '# Streamlit App Manual /n Tabs: /n * Text to Shape /n * TSNE vector viewer /n  * Shape interpolations'
+    st.markdown(manual_markdown)
 
 #%% Main selector system
 setWideModeHack()
