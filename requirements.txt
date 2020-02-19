@@ -24,6 +24,7 @@ defusedxml==0.6.0
 docutils==0.15.2
 entrypoints==0.3
 enum-compat==0.0.3
+https://github.com/explosion/spacy-models/releases/download/en_core_web_md-2.0.0/en_core_web_md-2.0.0.tar.gz
 future==0.18.2
 gast==0.2.2
 google-auth==1.11.2
