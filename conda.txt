@@ -40,7 +40,6 @@ defusedxml==0.6.0=py_0
 diff-match-patch==20181111=py_0
 dill==0.3.1.1=py37_0
 docutils==0.15.2=py37_0
-en-core-web-md
 entrypoints==0.3=py37_0
 expat==2.2.6=he6710b0_0
 ffmpeg==4=hcdf2ecd_0
