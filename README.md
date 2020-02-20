@@ -5,7 +5,7 @@ Tyler Habowski Insight AI Project | Session AI.SV.2020A
 Generate 3D models from text input to increase the speed and efficacy of the design process.
 
 # Streamlit App Manual
-See the demo live at [datanexus.xyz](https://www.datanexus.xyz)
+See the demo live at [datanexus.xyz](https://www.datanexus.xyz) (works best with Firefox!)
             
 ## Available Tabs:            
 - ### Text to shape generator
