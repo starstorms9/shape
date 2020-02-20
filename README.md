@@ -73,8 +73,10 @@ Then it repeats to find new vectors.
 
 ### Example pre-rendered gifs below:
 Interpolating between various swivel chairs:
+
 ![swivel chairs gif](https://github.com/starstorms9/shape/blob/master/media/swivelchairs.gif "")
 
 Interpolating between various random sofas:  
+
 ![couches gif](https://github.com/starstorms9/shape/blob/master/media/couches.gif "")
 
