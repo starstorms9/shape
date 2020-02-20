@@ -2,6 +2,7 @@
 import numpy as np
 import os
 import subprocess
+import re
 # if (not os.path.isdir('/data/sn/all')) : subprocess.call('sync_scripts.sh', shell=True)
 
 import skimage.measure as sm
@@ -11,6 +12,7 @@ import pandas as pd
 import random
 from tqdm import tqdm
 from scipy import signal
+from shutil import copyfile
 
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
@@ -283,6 +285,22 @@ def checkStopSignal(dir_path='/data/sn/all/'):
         return False
 
 #%% Display Functions
+
+# Create gif from images in folder with bash and ImageMagick (replace XX with max number of images or just set high and error)
+# !convert -delay 15 -loop 0 *{000..XXX}.png car2truck.gif    
+def makeGifFromDir(gif_in_dir, name) :
+    natsort = lambda l : sorted(l,key=lambda x:int(re.sub("\D","",x)or 0))
+    pngs = natsort(list(os.listdir(gif_in_dir)))
+    
+    total_len = len(pngs) * 2
+    for i, fp in enumerate(pngs) :
+        fullpath = os.path.join(gif_in_dir, fp)
+        fixpath = os.path.join(gif_in_dir, 'Figure_{:03d}.png'.format(i))
+        newpath = os.path.join(gif_in_dir, 'Figure_{:03d}.png'.format(total_len-i))
+        copyfile(fullpath, newpath)
+        os.rename(fullpath, fixpath)
+    subprocess.call('convert -delay 15 -loop 0 '+gif_in_dir+'*{000..XXX}.png '+str(name)+'.gif', shell=True)
+    
 def plotMesh(verts, faces) :
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')

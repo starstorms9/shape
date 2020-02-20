@@ -56,22 +56,7 @@ for sample, _ in train_dataset.unbatch().shuffle(10000).take(3) :
     grown = ut.growVox(vox, amount=0.5)
     sparsity_grown = ut.getSparsity(grown)
     ut.plotVox(grown, limits=cf_limits, title='Grown\n Sparse: {:.2f}'.format(100*sparsity_grown))
-    
-#%% Create gif from images in folder with bash and ImageMagick (replace XX with max number of images or just set high and error)
-# !convert -delay 15 -loop 0 *{000..XXX}.png car2truck.gif
-    
-gif_in_dir = '/home/starstorms/Insight/shape/gifs/c2c3shape/'
-pngs = sorted(list(os.listdir(gif_in_dir)))
-total_len = len(pngs) * 2
-for i, fp in enumerate(pngs) :
-    fullpath = os.path.join(gif_in_dir, fp)
-    fixpath = os.path.join(gif_in_dir, 'Figure_{:03d}.png'.format(i))
-    newpath = os.path.join(gif_in_dir, 'Figure_{:03d}.png'.format(total_len-i))
-    print('\nOld: {} \nFix: {} \nNew: {}'.format(fullpath, fixpath, newpath))
-    copyfile(fullpath, newpath)
-    os.rename(fullpath, fixpath)
-    
-    
+     
 
 #%%
 import shutil

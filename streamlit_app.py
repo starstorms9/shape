@@ -17,11 +17,8 @@ import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
 import plotly.express as px
-import plotly.graph_objects as go
 import plotly.figure_factory as FF
-import altair as alt
 import os
-import tensorflow as tf
 from tensorflow.keras.preprocessing.sequence import pad_sequences
 import spacy
 import random as rn
@@ -174,8 +171,8 @@ def addMIDLines(df_tsne, fig) :
 
 def getStartVects() :
     sindices = {
-        'Table'  : [7764, 6216, 3076, 2930, 7906, 715, 10496, 11358, 12722, 13475, 9348, 13785, 11697, 3165],
-        'Chair'  : [9479, 13872, 12775, 9203, 9682, 9062, 8801, 8134],
+        'Table'  : [7764, 6216, 3076, 2930, 715, 3165],
+        'Chair'  : [9479, 13872, 12775, 9203, 9682, 9062, 8801, 8134, 12722, 7906, 10496, 11358, 13475, 9348, 13785, 11697],
         'Lamp'   : [15111, 15007, 14634, 14646, 15314, 14485],
         'Faucet' : [15540, 15684, 15535, 15738, 15412],
         'Clock'  : [16124, 16034, 16153],
@@ -401,7 +398,7 @@ def manual() :
           
     tsne_pic = os.path.join(os.getcwd(), 'media/tsne_small.png')
     img = mpimg.imread(tsne_pic)    
-    st.image(img)
+    st.image(img, use_column_width=True)
            
     st.write(
             """    
@@ -421,15 +418,16 @@ def manual() :
                 - This sets the starting category for the algorithm but it will likely wander off into other categories
                 after a bit
             - Variety parameter
-                - This determines the diversity of the models.
+                - This determines the diversity of the models by setting how many local vectors to choose from.
         
             ### Example pre-rendered gif below:
                 """)
-                
-    couch_gif = os.path.join(os.getcwd(), 'media/couches.gif')
-    img = mpimg.imread(couch_gif)
-    gif_url = 'https://github.com/starstorms9/shape/blob/master/media/couches.gif?raw=true'
-    st.image(gif_url)
+            
+    cat_options = ['Couches','Chairs','Lamps','Faucets','Laptops','Vases','Beds','Mugs','Bowls','Clocks','Bottles']
+    gif_urls = ['https://github.com/starstorms9/shape/blob/master/media/{}.gif?raw=true'.format(cat.lower()) for cat in cat_options]
+    selected_cat = st.selectbox('Select a category to see shape interpolations', cat_options, index=0)
+    gif_url = gif_urls[cat_options.index(selected_cat)]
+    st.image(gif_url, use_column_width=True)
     
 #%% Main selector system
 modeOptions = ['Manual', 'Text to Shape', 'Latent Vect Exploration', 'Shape Interpolation']

@@ -90,13 +90,14 @@ lg.restoreCP() #'/home/starstorms/Insight/shape/runs/0204-2220/models/ckpt-71')
 all_voxs, all_mids = ut.loadData(cf_vox_size, cf_max_loads_per_cat, lg.vox_in_dir, cf_cat_prefixes)
 
 #%% Save base train data to file
-save_dir = '/data/sn/all/data' if remote else '/home/starstorms/Insight/ShapeNet/data'
+save_dir = '/data/sn/all/data' if remote else '/home/starstorms/Insight/shape/data'
 # np.save(os.path.join(save_dir, 'some_voxs.npy'), all_voxs, allow_pickle=True)
 # np.save(os.path.join(save_dir, 'some_mids.npy'), all_mids, allow_pickle=True)
 
 #%% Load base train data from file
-all_voxs = np.load(os.path.join(save_dir, 'all_voxs.npy'), allow_pickle=True)
-all_mids = np.load(os.path.join(save_dir, 'all_mids.npy'), allow_pickle=True)
+prefix = 'all' if remote else 'some'
+all_voxs = np.load(os.path.join(save_dir, prefix+'_voxs.npy'), allow_pickle=True)
+all_mids = np.load(os.path.join(save_dir, prefix+'_mids.npy'), allow_pickle=True)
 
 #%% Setup datasets
 voxs_stacked = np.stack(all_voxs, axis=0)
@@ -239,14 +240,54 @@ v = v.numpy()[:,:,:,:,0]
 for i, sample in enumerate(v) :    
     ut.plotVox(sample, step=1, threshold=0.5, limits=cf_limits, show_axes=False, )
 
+#%% Define some good starting indices
+sindices = {
+    'Table'  : [7764, 6216, 3076, 2930, 715, 3165],
+    'Chair'  : [9479, 13872, 12775, 9203, 9682, 9062, 8801, 8134, 12722, 7906, 10496, 11358, 13475, 9348, 13785, 11697],
+    'Lamp'   : [15111, 15007, 14634, 14646, 15314, 14485],
+    'Faucet' : [15540, 15684, 15535, 15738, 15412],
+    'Clock'  : [16124, 16034, 16153],
+    'Bottle' : [16690, 16736, 16689],
+    'Vase'   : [17463, 17484, 17324, 17224, 17453],
+    'Laptop' : [17780, 17707, 17722],
+    'Bed'    : [18217, 18161],
+    'Mug'    : [18309, 18368, 18448],
+    'Bowl'   : [18501, 17287, 18545, 18479, 18498]}
+
+#%%
+ut.makeGifFromDir('/home/starstorms/Insight/shape/gifs/shapetime/faucets2', 'faucets')
+ut.makeGifFromDir('/home/starstorms/Insight/shape/gifs/shapetime/bottles', 'bottles')
+ut.makeGifFromDir('/home/starstorms/Insight/shape/gifs/shapetime/vases', 'vases')
+ut.makeGifFromDir('/home/starstorms/Insight/shape/gifs/shapetime/beds', 'beds')
+ut.makeGifFromDir('/home/starstorms/Insight/shape/gifs/shapetime/mugs', 'mugs')
+ut.makeGifFromDir('/home/starstorms/Insight/shape/gifs/shapetime/bowls', 'bowls')
+ut.makeGifFromDir('/home/starstorms/Insight/shape/gifs/shapetime/swivelchairs', 'swivelchairs')
+ut.makeGifFromDir('/home/starstorms/Insight/shape/gifs/shapetime/chairs', 'chairs')
+ut.makeGifFromDir('/home/starstorms/Insight/shape/gifs/shapetime/tables', 'tables')
+ut.makeGifFromDir('/home/starstorms/Insight/shape/gifs/shapetime/roundtables', 'roundtables')
+
+#%%
+gif_dirs = [
+'/home/starstorms/Insight/shape/gifs/shapetime/faucets2/',
+'/home/starstorms/Insight/shape/gifs/shapetime/beds/',
+'/home/starstorms/Insight/shape/gifs/shapetime/mugs/',
+'/home/starstorms/Insight/shape/gifs/shapetime/bowls/',
+'/home/starstorms/Insight/shape/gifs/shapetime/swivelchairs/',
+'/home/starstorms/Insight/shape/gifs/shapetime/chairs/',
+'/home/starstorms/Insight/shape/gifs/shapetime/tables/']
+
+index = 0
+subprocess.call('convert -delay 15 -loop 0 '+gif_dirs[index]+'*{000..XXX}.png '+str('faucets')+'.gif', shell=True)
+
+
 #%% Go on a journey through shapetime
 model.training=False
 good_ones = []
-journey_length = 40
-start_index = 1510
-vects_sample = 100
+journey_length = 20
+start_index = 715
+vects_sample = 8
 max_dist = 8
-interp_points = 8
+interp_points = 6
 plot_step = 2
 
 journey_vecs = []
@@ -284,8 +325,8 @@ for i, vect in enumerate(journey_vecs) :
 for i, vox in enumerate(journey_voxs) :
     ut.plotVox(vox, step=plot_step, limits = cf_limits, title='', show_axes=False)    
     
-#%% Sample for some starting points
-# i = start_index
+#%% Randomly search for some object indices
+i = start_index
 for i in np.random.randint(0, len(shape2vec), size=100) :
     vox = shapemodel.decode(shape2vec[mids[i]][None,...], apply_sigmoid=True)[0,...,0]    
     ut.plotVox(vox, step=2, limits = cf_limits, title=i)
@@ -293,10 +334,10 @@ for i in np.random.randint(0, len(shape2vec), size=100) :
 #%% Go on a directed trajectory
 model.training=False
 good_ones = [1781, 557, 574, 12418, 9771, 4819, 13419, 13836, 5810, 14922, 9105]
-journey_length = 10
+journey_length = 20
 start_index = 8213
 end_index = 4002
-vects_sample = 200
+vects_sample = 5
 interp_points = 8
 percent_step_size = 0.0
 plot_step = 2
@@ -364,7 +405,8 @@ f = open(os.path.join(rdir,"shape2loss.pkl"),"wb")
 pickle.dump(shape2loss,f)
 f.close()
 
-#%% Read text2vec pickle
+#%% Read shape2vec pickle
+rdir = lg.root_dir
 infile = open(os.path.join(rdir,"shape2vec.pkl"),'rb')
 shape2vec = pickle.load(infile)
 infile.close()
