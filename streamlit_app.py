@@ -41,11 +41,11 @@ def setWideModeHack():
     max_width_str = f"max-width: 2000px;"
     st.markdown( f""" <style> .reportview-container .main .block-container{{ {max_width_str} }} </style> """, unsafe_allow_html=True)
 
-@st.cache(persist=True)
+@st.cache
 def loadTSNEData2D(axes='2d') :
     return pd.read_csv(os.path.join(os.getcwd(),'data/df_sl_2d.csv'))
 
-@st.cache(persist=True)
+@st.cache
 def getTSNE2DData() :
     df_tsne = loadTSNEData2D()
     df_tsne = df_tsne[df_tsne.columns.drop(list(df_tsne.filter(regex='Unnamed:')))]
@@ -55,12 +55,12 @@ def getTSNE2DData() :
     df_tsne.columns = named_cols
     return df_tsne    
 
-@st.cache(persist=True)
+@st.cache
 def loadExampleDescriptions() :
     example_descriptions = np.load(os.path.join(os.getcwd(), 'data/exdnp.npy'))
     return list(example_descriptions)
 
-@st.cache(show_spinner=False)
+@st.cache
 def loadShape2Vec() :
     infile = open(os.path.join(os.getcwd(), 'data/shape2vec.pkl'),'rb')
     shape2vec = pickle.load(infile)
@@ -70,7 +70,7 @@ def loadShape2Vec() :
     vec_tree = spatial.KDTree(vecs)
     return shape2vec, mids, vecs, vec_tree
 
-@st.cache(show_spinner=False)
+@st.cache
 def loadMid2Desc() :
     infile = open(os.path.join(os.getcwd(), 'data/mid2desc.pkl'),'rb')
     mid2desc = pickle.load(infile)
@@ -91,7 +91,7 @@ def makeTextModel() :
     textmodel.loadMyModel(model_in_dir, 10569)
     return textmodel
 
-@st.cache(allow_output_mutation=True, persist=True)
+@st.cache(allow_output_mutation=True)
 def getSpacy() :
     nlp = spacy.load("en_core_web_md", parser=False, tagger=False, entity=False)
     return nlp.vocab
