@@ -29,10 +29,7 @@ The bottom of this tab shows similar descriptions to the input description. Use 
 - Laptop   (460)
 - Bed      (233)
 - Mug      (214)
-- Bowl     (186)
-
-(show some descriptions)
-        
+- Bowl     (186)        
 
 ## Latent Vector Exploration
 This tab shows the plot of the shape embedding vectors reduced from the full model dimensionality of 128 dimensions
