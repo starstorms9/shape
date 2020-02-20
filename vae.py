@@ -254,32 +254,6 @@ sindices = {
     'Mug'    : [18309, 18368, 18448],
     'Bowl'   : [18501, 17287, 18545, 18479, 18498]}
 
-#%%
-ut.makeGifFromDir('/home/starstorms/Insight/shape/gifs/shapetime/faucets2', 'faucets')
-ut.makeGifFromDir('/home/starstorms/Insight/shape/gifs/shapetime/bottles', 'bottles')
-ut.makeGifFromDir('/home/starstorms/Insight/shape/gifs/shapetime/vases', 'vases')
-ut.makeGifFromDir('/home/starstorms/Insight/shape/gifs/shapetime/beds', 'beds')
-ut.makeGifFromDir('/home/starstorms/Insight/shape/gifs/shapetime/mugs', 'mugs')
-ut.makeGifFromDir('/home/starstorms/Insight/shape/gifs/shapetime/bowls', 'bowls')
-ut.makeGifFromDir('/home/starstorms/Insight/shape/gifs/shapetime/swivelchairs', 'swivelchairs')
-ut.makeGifFromDir('/home/starstorms/Insight/shape/gifs/shapetime/chairs', 'chairs')
-ut.makeGifFromDir('/home/starstorms/Insight/shape/gifs/shapetime/tables', 'tables')
-ut.makeGifFromDir('/home/starstorms/Insight/shape/gifs/shapetime/roundtables', 'roundtables')
-
-#%%
-gif_dirs = [
-'/home/starstorms/Insight/shape/gifs/shapetime/faucets2/',
-'/home/starstorms/Insight/shape/gifs/shapetime/beds/',
-'/home/starstorms/Insight/shape/gifs/shapetime/mugs/',
-'/home/starstorms/Insight/shape/gifs/shapetime/bowls/',
-'/home/starstorms/Insight/shape/gifs/shapetime/swivelchairs/',
-'/home/starstorms/Insight/shape/gifs/shapetime/chairs/',
-'/home/starstorms/Insight/shape/gifs/shapetime/tables/']
-
-index = 0
-subprocess.call('convert -delay 15 -loop 0 '+gif_dirs[index]+'*{000..XXX}.png '+str('faucets')+'.gif', shell=True)
-
-
 #%% Go on a journey through shapetime
 model.training=False
 good_ones = []

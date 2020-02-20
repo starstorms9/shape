@@ -423,7 +423,7 @@ def manual() :
             ### Example pre-rendered gif below:
                 """)
             
-    cat_options = ['Couches','Chairs','Lamps','Faucets','Laptops','Vases','Beds','Mugs','Bowls','Clocks','Bottles']
+    cat_options = ['Couches','Chairs','Faucets','Beds','Bottles','Bowls','Lamps','Mugs','RoundTables','SwivelChairs','Tables']
     gif_urls = ['https://github.com/starstorms9/shape/blob/master/media/{}.gif?raw=true'.format(cat.lower()) for cat in cat_options]
     selected_cat = st.selectbox('Select a category to see shape interpolations', cat_options, index=0)
     gif_url = gif_urls[cat_options.index(selected_cat)]
