@@ -203,7 +203,6 @@ file = open('/home/starstorms/Insight/shape/shape/data/mid2desc.pkl', 'wb')
 pickle.dump(mid2desc, file)
 file.close()
 
-
 #%% Test text2shape model
 for i in range(20) :
     text = input('Text description: ')

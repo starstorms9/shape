@@ -250,8 +250,11 @@ def text2Shape() :
     _, close_ids = vec_tree.query(encoding, k = 5)
     close_ids = list(close_ids[0])
     for i, index in enumerate(close_ids) :
-        mid = mids[int(index)]
-        st.write('{}. {}'.format(i+1, mid2desc[mid]))
+        try :
+            mid = mids[int(index)]
+            st.write('{}. {}'.format(i+1, mid2desc[mid]))
+        except :
+            continue
 
 def vectExplore() :
     setWideModeHack()
