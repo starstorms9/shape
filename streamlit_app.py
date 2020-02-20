@@ -73,14 +73,14 @@ def loadShape2Vec() :
     vec_tree = spatial.KDTree(vecs)
     return shape2vec, mids, vecs, vec_tree
 
-@st.cache(allow_output_mutation=True, persist=True)
+@st.cache(allow_output_mutation=True)
 def makeShapeModel() :
     model_in_dir = os.path.join(os.getcwd(), 'models/autoencoder')
     shapemodel = cv.CVAE(128, 64, training=False)
     shapemodel.loadMyModel(model_in_dir, 195)
     return shapemodel
 
-@st.cache(allow_output_mutation=True, persist=True)
+@st.cache(allow_output_mutation=True)
 def makeTextModel() :
     model_in_dir = os.path.join(os.getcwd(),'models/textencoder')
     textmodel = ts.TextSpacy(cf_latent_dim, max_length=cf_max_length, training=False)
@@ -270,6 +270,7 @@ def vectExplore() :
 def shapetime() :
     setWideModeHack()
     header.title('Shape Interpolations')
+    subheader = st.subheader('Loading data...')
     cat_options = ['Table','Chair','Lamp','Faucet','Clock','Bottle','Vase','Laptop','Bed','Mug','Bowl']        
     starting_cat = st.sidebar.selectbox('Choose starting shape:', cat_options)
     start_indices = getStartVects()
@@ -287,10 +288,12 @@ def shapetime() :
     
     start_vect = shape2vec[mids[start_index]]
     visited_indices = [start_index]
-    while True :
+    for i in range(3) :
         journey_vecs = []
         journey_mids = []
         journey_mids.append(mids[start_index])
+        subheader.subheader('Generating models...')
+        
         for i in range(5) :
             n_dists, close_ids = vec_tree.query(start_vect, k = vects_sample, distance_upper_bound=max_dist)
             if len(shape2vec) in close_ids :
@@ -314,6 +317,7 @@ def shapetime() :
         for i, vect in enumerate(journey_vecs) :
             journey_voxs[i,...] = shapemodel.decode(vect[None,...], apply_sigmoid=True)[0,...,0]
         
+        subheader.subheader('Showing models...')
         for i, vox in enumerate(journey_voxs) :
             data = plotVox(vox, step=plot_step, tsnedata=df_tsne)
             empty.image(data)
@@ -410,9 +414,9 @@ def manual() :
     st.image(gif_url)
     
     # Putting these here so they start being made and cached while reading the manual
-    vocab = getSpacy()
-    shapemodel = makeShapeModel()
-    textmodel = makeTextModel()
+    # vocab = getSpacy()
+    # shapemodel = makeShapeModel()
+    # textmodel = makeTextModel()
 
 #%% Main selector system
 modeOptions = ['Manual', 'Text to Shape', 'Latent Vect Exploration', 'Shape Interpolation']
