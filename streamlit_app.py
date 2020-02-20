@@ -193,9 +193,9 @@ def showMesh(verts, faces, aspect=dict(x=1, y=1, z=1), plot_it=True, title='') :
     fig = FF.create_trisurf(x=verts[:,0], y=verts[:,1], z=verts[:,2], simplices=faces, title=title, aspectratio=aspect)
     fig.update_layout(
     scene = dict(
-        xaxis = dict(nticks=4, range=[0,cf_vox_size+1],),
-                     yaxis = dict(nticks=4, range=[0,cf_vox_size+1],),
-                     zaxis = dict(nticks=4, range=[0,cf_vox_size+1],),),
+        xaxis = dict(nticks=1, range=[0,cf_vox_size+1],backgroundcolor='white', gridcolor='white'),
+        yaxis = dict(nticks=1, range=[0,cf_vox_size+1],backgroundcolor='white', gridcolor='white'),
+        zaxis = dict(nticks=1, range=[0,cf_vox_size+1],backgroundcolor='white', gridcolor='white'),),
     width=900, height=700,
     margin=dict(r=20, l=10, b=10, t=10))
     return fig
