@@ -87,21 +87,7 @@ mnp, dnp, vnp, pnp = np.stack(mids), np.stack(descs), np.stack(vects), np.stack(
 
 #%%
 # np.save(save_template.format('mnp'), mnp) , np.save(save_template.format('dnp'), dnp) , np.save(save_template.format('vnp'), vnp) , np.save(save_template.format('pnp'), pnp)
-# mnp, dnp, vnp, pnp = np.load(save_template.format('mnp')), np.load(save_template.format('dnp')), np.load(save_template.format('vnp')), np.load(save_template.format('pnp'))
-
-#%% Average and remove duplicates
-# def avg_dups(labels, values, label_values):
-#     folded, indices, counts = np.unique(labels, return_inverse=True, return_counts=True)
-#     output = np.zeros((folded.shape[0], values.shape[1]))
-#     np.add.at(output, indices, values)
-#     output /= counts[:, None]
-    
-#     label_output = np.zeros((folded.shape[0], label_values.shape[1]))
-#     label_output[indices] = label_values
-    
-#     return label_output, output
-
-# lnp, onp = avg_dups(dnp, vnp, pnp)
+mnp, dnp, vnp, pnp = np.load(save_template.format('mnp')), np.load(save_template.format('dnp')), np.load(save_template.format('vnp')), np.load(save_template.format('pnp'))
 
 #%% Make datasets
 num_samples = len(pnp)
@@ -177,17 +163,6 @@ signs_eq = sum(np.sign(pred[index]) == np.sign(tl[index])) / pred[index].shape[0
 print('\nStats for this comparison\n{:3d}  Loss: {:.3f}  Sum pred: {:.3f}  Sum lab: {:.3f}  Same Sign: {:.1f}%'.format(index, l, np.sum(pred[index]), np.sum(tl[index]), 100*signs_eq))
 
 #%%
-txtmodel.sample(pnp[0:1])
-vnp[0:1]
-
-#%% Show nearest neighbor descriptions
-index = 1
-n_dists, close_ids = txt_vec_tree.query(label_vects[index], k = 3)
-nearest_descs = [ dfmeta[dfmeta.mid == mids[cid]].desc.values[0] for cid in close_ids]
-for d in nearest_descs : print(d, '\n')
-
-
-#%%
 shapemodel = cv.CVAE(cf_latent_dim, cf_vox_size) #, training=False)
 shapemodel.printMSums()
 shapemodel.printIO()
@@ -205,31 +180,35 @@ def getVox(text) :
     vox = shapemodel.sample(preds).numpy()[0,...,0]
     return vox
 
-#%% Test text2shape model
-keyword = 'bowl'
-# ex_descs = []
-for i in range(10) :
-    desc = dnp[np.random.randint(0,len(dnp))]
-    while not keyword in desc :
+#%% Generate a balanced set of sample descriptions to show on streamlit app
+ex_descs = []
+for keyword in ['Table','Chair','Lamp','Faucet','Clock','Bottle','Vase','Laptop','Bed','Mug','Bowl'] :
+    for i in range(50) :
         desc = dnp[np.random.randint(0,len(dnp))]
-    ex_descs.append(desc)
-    print(desc)
-    
+        while not keyword.lower() in desc :
+            desc = dnp[np.random.randint(0,len(dnp))]
+        ex_descs.append(desc)
+        print(desc)
+np.save('/home/starstorms/Insight/shape/shape/data/exdnp.npy', np.array(ex_descs))
+
+#%% Generate a large set of sample descriptions to inform nearby descriptions on app
+mid2desc = {}
+for mid in tqdm(shape2vec.keys()) :
+    indices = np.where(mnp==mid)[0]
+    if len(indices) > 0 :
+        desc = dnp[rn.sample(list(indices), 1)][0]
+        mid2desc[mid] = desc
+
+file = open('/home/starstorms/Insight/shape/shape/data/mid2desc.pkl', 'wb')
+pickle.dump(mid2desc, file)
+file.close()
+
+
+#%% Test text2shape model
 for i in range(20) :
     text = input('Text description: ')
     vox = getVox(text)
     ut.plotVox(vox, limits=cf_limits)
-
-#%% See averaged out reconstructions
-for i in range(100):
-    index = rn.randint(0, len(onp))
-    rand_vect = onp[index][None,...]
-    desc = decode(lnp[index])
-    vox = shapemodel.sample(rand_vect).numpy()[0,...,0]
-    ut.plotVox(vox, limits=cf_limits, title='')
-    # print(desc)
-    # temp = input('Enter to continue...')
-
 
 #%% Run on single line of text
 text = ' ceiling lamp that is very skinny and very tall.  it has one head .  it has a base.  it has one chain .'

@@ -73,6 +73,13 @@ def loadShape2Vec() :
     vec_tree = spatial.KDTree(vecs)
     return shape2vec, mids, vecs, vec_tree
 
+@st.cache(show_spinner=False)
+def loadMid2Desc() :
+    infile = open(os.path.join(os.getcwd(), 'data/mid2desc.pkl'),'rb')
+    mid2desc = pickle.load(infile)
+    infile.close()
+    return mid2desc
+
 @st.cache(allow_output_mutation=True)
 def makeShapeModel() :
     model_in_dir = os.path.join(os.getcwd(), 'models/autoencoder')
@@ -110,7 +117,7 @@ def getVox(text, shapemodel, textmodel, nlp) :
     ptv = padEnc(text, nlp)
     preds = textmodel.sample(ptv)
     vox = shapemodel.sample(preds).numpy()[0,...,0]
-    return vox
+    return vox, preds
 
 def conditionTextInput(text) :
     replacements = {
@@ -214,10 +221,6 @@ def plotVox(voxin, step=1, title='', tsnedata=None) :
     fig.canvas.draw()
     data = np.fromstring(fig.canvas.tostring_rgb(), dtype=np.uint8, sep='')
     data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-
-    # bright=["#023EFF","#FF7C00","#1AC938","#E8000B","#8B2BE2","#9F4800","#F14CC1","#A3A3A3","#000099","#00D7FF","#222A2A"]    
-    # ax = fig.add_subplot(122)
-    # sns.scatterplot(data=tsnedata, x='tsne1', y='tsne2', hue='Category', s=10, linewidth=0, palette='bright')    
     return data
 
 #%% Setup main methods
@@ -235,11 +238,20 @@ def text2Shape() :
     
     description = st.text_input('Enter Shape Description:', value='a regular chair. it has four legs.')
     description = conditionTextInput(description)
-    vox = getVox(description, shapemodel, textmodel, vocab)
+    vox, encoding = getVox(description, shapemodel, textmodel, vocab)
     
     verts, faces = createMesh(vox, step=1)
     fig = showMesh(verts, faces)
     st.write(fig)
+    
+    st.header('Similar descriptions:')
+    mid2desc = loadMid2Desc()
+    shape2vec, mids, vecs, vec_tree = loadShape2Vec()
+    _, close_ids = vec_tree.query(encoding, k = 5)
+    close_ids = list(close_ids[0])
+    for i, index in enumerate(close_ids) :
+        mid = mids[int(index)]
+        st.write('{}. {}'.format(i+1, mid2desc[mid]))
 
 def vectExplore() :
     setWideModeHack()
@@ -255,7 +267,6 @@ def vectExplore() :
     ymin, ymax = df_tsne.tsne2.min(), df_tsne.tsne2.max()
     xlims, ylims = [xmin*padding, xmax*padding], [ymin*padding, ymax*padding]
     
-    config={'scrollZoom': True, 'modeBarButtonsToRemove' : ['lasso2d','zoom2d']}
     fig = px.scatter(data_frame=df_tsne.dropna(), range_x = xlims, range_y = ylims,
                       hover_name='Category',
                       hover_data=['Sub Categories', 'Anno ID'],
@@ -300,7 +311,7 @@ def shapetime() :
                 n_dists, close_ids = vec_tree.query(start_vect, k = vects_sample, distance_upper_bound=max_dist*3)    
             close_ids = list(close_ids)
             
-            visited_indices = visited_indices[:100]            
+            visited_indices = visited_indices[:50]            
             for index in sorted(close_ids, reverse=True):
                 if index in visited_indices:
                     close_ids.remove(index)
@@ -321,6 +332,7 @@ def shapetime() :
         for i, vox in enumerate(journey_voxs) :
             data = plotVox(vox, step=plot_step, tsnedata=df_tsne)
             empty.image(data)
+    subheader.subheader('All done!')
         
 def manual() :
     example_descriptions = loadExampleDescriptions()
@@ -337,6 +349,9 @@ def manual() :
             ## Text to Shape Generator
             This tab allows you to input a description and the generator will make a model based on that description.
             The 3D plotly viewer generally works much faster in Firefox compared to chrome so use that if chrome is being slow.
+            
+            The bottom of this tab shows similar descriptions to the input description. Use these samples to see new designs and 
+            learn how the model interprets the text.
             
             #### Models were trained on these object classes _(number of train examples)_:
             - Table    (8436)
@@ -413,11 +428,6 @@ def manual() :
     gif_url = 'https://github.com/starstorms9/shape/blob/master/media/couches.gif?raw=true'
     st.image(gif_url)
     
-    # Putting these here so they start being made and cached while reading the manual
-    # vocab = getSpacy()
-    # shapemodel = makeShapeModel()
-    # textmodel = makeTextModel()
-
 #%% Main selector system
 modeOptions = ['Manual', 'Text to Shape', 'Latent Vect Exploration', 'Shape Interpolation']
 st.sidebar.header('Select Mode:')
