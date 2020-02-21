@@ -303,7 +303,7 @@ def shapetime() :
         journey_vecs = []
         journey_mids = []
         journey_mids.append(mids[start_index])
-        subheader.subheader('Generating models...')
+        subheader.subheader('Generating models... please wait...')
         
         for i in range(5) :
             n_dists, close_ids = vec_tree.query(start_vect, k = vects_sample, distance_upper_bound=max_dist)
@@ -328,7 +328,7 @@ def shapetime() :
         for i, vect in enumerate(journey_vecs) :
             journey_voxs[i,...] = shapemodel.decode(vect[None,...], apply_sigmoid=True)[0,...,0]
         
-        subheader.subheader('Showing models...')
+        subheader.subheader('Showing models... (may have to scroll down)')
         for i, vox in enumerate(journey_voxs) :
             data = plotVox(vox, step=plot_step, tsnedata=df_tsne)
             empty.image(data)
@@ -340,6 +340,8 @@ def manual() :
     st.write(
             """
             This is my streamlit app for my Insight AI.SV.2020A project.
+            See slides related to the development of this app [here](https://drive.google.com/open?id=1u9Iq2nyES0Rx55F-Nn02x4phViBae2Ps4181UONW_DI) 
+            and the github repo with code [here](https://github.com/starstorms9/shape).
             
             ## Available Tabs:            
             - ### Text to shape generator

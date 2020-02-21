@@ -19,9 +19,9 @@ class TextSpacy(tf.keras.Model):
         spacy_embeddings = self.get_embeddings() if len(embeddings)==0 else embeddings
         
         model = tf.keras.Sequential()
-        model.add(Embedding(spacy_embeddings.shape[0], spacy_embeddings.shape[1], input_length=max_length, trainable=False, weights=[spacy_embeddings] ) )
-        model.add(SpatialDropout1D(self.dropoutRate))     
-        model.add(Bidirectional(LSTM(64, return_sequences=True, kernel_regularizer=regularizers.l2(0.001))))
+        model.add(Embedding(spacy_embeddings.shape[0], spacy_embeddings.shape[1], input_length=max_length, trainable=True, weights=[spacy_embeddings] ) )
+        model.add(SpatialDropout1D(self.dropoutRate))
+        model.add(Bidirectional(LSTM(128, return_sequences=True, kernel_regularizer=regularizers.l2(0.001))))
         model.add(Dropout(self.dropoutRate))
         model.add(Bidirectional(LSTM(128, return_sequences=True, kernel_regularizer=regularizers.l2(0.001))))
         model.add(Dropout(self.dropoutRate))

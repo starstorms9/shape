@@ -107,7 +107,7 @@ txtmodel.model.compile(optimizer='adam', loss=tf.keras.losses.MeanSquaredError()
 loss_mean = tf.keras.metrics.Mean()
 
 #%% Setup logger info
-run_name = 'txtruns/0217-0437'
+run_name = 'txtruns/0217-0434'
 root_dir_local = '/home/starstorms/Insight/shape/' + run_name
 root_dir_remote = '/data/sn/all/' + run_name
 lg = logger.logger(root_dir = root_dir_remote if remote else root_dir_local)
@@ -151,7 +151,7 @@ def trainModel(num_epochs, display_interval=-1, save_interval=10, validate_inter
 lg.writeConfig(locals(), [ts])
 trainModel(20000, save_interval=20, validate_interval=5)
 
-#%%
+#%% Compare predicted and labeled vectors
 index = 1
 for tx, tl in train_ds.take(1) : pass
 txtmodel.model.training = False
@@ -162,7 +162,14 @@ l = txtmodel.compute_loss(tl[index], pred[index]).numpy()
 signs_eq = sum(np.sign(pred[index]) == np.sign(tl[index])) / pred[index].shape[0]
 print('\nStats for this comparison\n{:3d}  Loss: {:.3f}  Sum pred: {:.3f}  Sum lab: {:.3f}  Same Sign: {:.1f}%'.format(index, l, np.sum(pred[index]), np.sum(tl[index]), 100*signs_eq))
 
-#%%
+#%% Get test set loss
+for tx, tl in train_ds.shuffle(100000).take(1000) : pass
+txtmodel.model.training = False
+pred = txtmodel.sample(tx)
+losses = np.mean(txtmodel.compute_loss(pred, tl))
+print(losses)
+
+#%% Load shape model
 shapemodel = cv.CVAE(cf_latent_dim, cf_vox_size) #, training=False)
 shapemodel.printMSums()
 shapemodel.printIO()
