@@ -340,6 +340,7 @@ def manual() :
     st.write(
             """
             This is my streamlit app for my Insight AI.SV.2020A project.
+            
             See slides related to the development of this app [here](https://drive.google.com/open?id=1u9Iq2nyES0Rx55F-Nn02x4phViBae2Ps4181UONW_DI) 
             and the github repo with code [here](https://github.com/starstorms9/shape).
             
