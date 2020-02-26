@@ -233,7 +233,7 @@ def text2Shape() :
     textmodel = makeTextModel()
     loading_text.text('Models done being made!')
     
-    description = st.text_input('Enter Shape Description:', value='a regular chair. it has four legs.')
+    description = st.text_input('Enter Shape Description:', value='a regular chair with four legs.')
     description = conditionTextInput(description)
     vox, encoding = getVox(description, shapemodel, textmodel, vocab)
     
@@ -344,6 +344,16 @@ def manual() :
             See slides related to the development of this app [here](https://drive.google.com/open?id=1u9Iq2nyES0Rx55F-Nn02x4phViBae2Ps4181UONW_DI) 
             and the github repo with code [here](https://github.com/starstorms9/shape).
             
+            **Below is an example of what can be generated. Input was 'a regular chair with four legs.'**
+            """ )
+     
+    chair_verts = pickle.load( open( os.path.join(os.getcwd(), 'media/chair_verts.p'), "rb" ))
+    chair_faces = pickle.load( open( os.path.join(os.getcwd(), 'media/chair_faces.p'), "rb" ))
+    fig = showMesh(chair_verts, chair_faces)
+    st.write(fig)
+    
+    st.write(
+            """
             ## Available Tabs:            
             - ### Text to shape generator
             - ### Latent vector exploration
