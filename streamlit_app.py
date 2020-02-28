@@ -165,7 +165,10 @@ def addThumbnailSelections(df_tsne) :
                     st.image(img, use_column_width = False)
                     desc_empty.text(mid2desc[mid])                
             except :
-                st.text('Could not find {}'.format(annosinspect[i]))
+                if (sidebar_renders) :
+                    st.sidebar.text('Could not find {}'.format(annosinspect[i]))
+                else :
+                    st.text('Could not find {}'.format(annosinspect[i]))
 
 def addMIDLines(df_tsne, fig) :
     midslist = list(df_tsne['Model ID'])
