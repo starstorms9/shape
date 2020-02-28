@@ -139,16 +139,13 @@ def conditionTextInput(text) :
         desc = desc.replace(fix, replacements[fix])
     return desc
 
-def addThumbnailSelections(df_tsne) :
-    pic_in_dir='/home/starstorms/Insight/ShapeNet/renders'
-    if not os.path.isdir(pic_in_dir) : return
-    
-    annoid_input = st.sidebar.text_input('Anno ID to view')
+def addThumbnailSelections(df_tsne) :    
+    annoid_input = st.sidebar.text_input('Anno ID to view (from plot hover text):')
     if len(annoid_input) > 1 :
         annosinspect = [annoid.strip().replace("'", "").replace("[", "").replace("]", "") for annoid in re.split(',',annoid_input) if len(annoid) > 1]
         modelid = df_tsne[df_tsne['Anno ID'] == int(annosinspect[0])]['Model ID'].values[0]
         
-        pic_in_dir='/home/starstorms/Insight/ShapeNet/renders'
+        pic_in_dir = 'https://starstorms-shape.s3-us-west-2.amazonaws.com/renders/'
         fullpath = os.path.join(pic_in_dir, modelid+'.png')
         img = mpimg.imread(fullpath)
         st.sidebar.image(img)
@@ -397,6 +394,8 @@ def manual() :
                 - This sets the dot size. Helpful when zooming in on a region.
             - Model IDs             
                 - This allows for putting in multiple model IDs to see how they're connected on the graph.
+            - Anno IDs to view
+                - From the hover text on the plot you can see the 'Anno ID' (annotation ID) and enter it into this box to see a render of the object.
             
             Additionally, using the plotly interface you can **double click** on a category in the legend to show only that
             category of dots. Or **click once** to toggle showing that category. You can also zoom in on specific regions to
