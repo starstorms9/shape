@@ -139,16 +139,33 @@ def conditionTextInput(text) :
         desc = desc.replace(fix, replacements[fix])
     return desc
 
-def addThumbnailSelections(df_tsne) :    
-    annoid_input = st.sidebar.text_input('Anno ID to view (from plot hover text):')
+def addThumbnailSelections(df_tsne) :   
+    annoid_input = st.sidebar.text_input('Anno IDs to view (comma separated, from plot):')
+    sidebar_renders = st.sidebar.checkbox('Show renders in sidebar?')
     if len(annoid_input) > 1 :
         annosinspect = [annoid.strip().replace("'", "").replace("[", "").replace("]", "") for annoid in re.split(',',annoid_input) if len(annoid) > 1]
-        modelid = df_tsne[df_tsne['Anno ID'] == int(annosinspect[0])]['Model ID'].values[0]
-        
+                
         pic_in_dir = 'https://starstorms-shape.s3-us-west-2.amazonaws.com/renders/'
-        fullpath = os.path.join(pic_in_dir, modelid+'.png')
-        img = mpimg.imread(fullpath)
-        st.sidebar.image(img)
+        mid2desc = loadMid2Desc()
+                
+        for i, aid in enumerate(annosinspect) :
+            try :
+                mid = df_tsne[df_tsne['Anno ID'] == int(aid)]['Model ID'].values[0]
+                fullpath = os.path.join(pic_in_dir, mid+'.png')
+                img = mpimg.imread(fullpath)
+                
+                if (sidebar_renders) :
+                    st.sidebar.text('Annod ID: {}'.format(annosinspect[i]))
+                    desc_empty = st.sidebar.empty()
+                    st.sidebar.image(img, use_column_width = True)
+                    desc_empty.text(mid2desc[mid])
+                else :
+                    st.text('Annod ID: {}'.format(annosinspect[i]))
+                    desc_empty = st.empty()
+                    st.image(img, use_column_width = False)
+                    desc_empty.text(mid2desc[mid])                
+            except :
+                st.text('Could not find {}'.format(annosinspect[i]))
 
 def addMIDLines(df_tsne, fig) :
     midslist = list(df_tsne['Model ID'])
@@ -271,7 +288,7 @@ def vectExplore() :
                       x='tsne1', y='tsne2', color=color_option, color_discrete_sequence=bright, width=1400, height=900)
     fig.update_traces(marker= dict(size=size, opacity=0.7, line=dict(width=0.1))) # size=2.3
     
-    addMIDLines(df_tsne, fig)
+    # addMIDLines(df_tsne, fig)
     st.write(fig)    
     addThumbnailSelections(df_tsne)
 
@@ -388,14 +405,16 @@ def manual() :
             down to 2 so they can be viewed easily. The method for dimensionality reduction was TSNE.
             
             #### In the exploration tab, there are several sidebar options:
-            - Color data
+            - **Color data**
                 - This selector box sets what determines the color of the dots. (the class selections are particularly interesting!)
             - Plot dot size
                 - This sets the dot size. Helpful when zooming in on a region.
             - Model IDs             
                 - This allows for putting in multiple model IDs to see how they're connected on the graph.
-            - Anno IDs to view
-                - From the hover text on the plot you can see the 'Anno ID' (annotation ID) and enter it into this box to see a render of the object.
+            - **Anno IDs to view**
+                - From the hover text on the TSNE plot points you can see the 'Anno ID' (annotation ID) and enter it into this box to see a render of the object and 1 of its generated descriptions.
+                - Multiple IDs can be entered and separated by commas.
+                - The renders can be viewed in the sidebar or in the main area below the TSNE graph.
             
             Additionally, using the plotly interface you can **double click** on a category in the legend to show only that
             category of dots. Or **click once** to toggle showing that category. You can also zoom in on specific regions to
