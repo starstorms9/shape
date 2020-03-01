@@ -1,3 +1,11 @@
+'''
+This file is intended for two purposes:
+    1. Training the text model
+    2. Loading in and quickly testing the overall text2shape model
+    
+
+'''
+
 #%% Imports
 import os
 import pandas as pd
@@ -17,9 +25,9 @@ import cvae as cv
 import utils as ut
 import logger
 import textspacy as ts
+import configs as cf
 
 np.set_printoptions(precision=3, suppress=True)
-remote = os.path.isdir('/data/sn/all')
 
 #%% Load text data
 cf_vox_size = 64
@@ -30,11 +38,10 @@ cf_trunc_type = 'post'
 cf_padding_type = 'post'
 cf_oov_tok = '<OOV>'
 cf_limits=[cf_vox_size, cf_vox_size, cf_vox_size]
-dfmeta = ut.readMeta('/data/sn/all/meta/dfmeta.csv') if remote else ut.readMeta()
+dfmeta = ut.readMeta()
 
-rdir_local = '/home/starstorms/Insight/shape/runs/0209-0306'
-rdir_remote = '/data/sn/all/runs/0209-0306'
-infile = open(os.path.join(rdir_remote if remote else rdir_local,"shape2vec.pkl"),'rb')
+shp_run_id = '0209-0306'
+infile = open(os.path.join(cf.SHAPE_RUN_DIR, shp_run_id, "shape2vec.pkl"),'rb')
 shape2vec = pickle.load(infile)
 infile.close()
 
@@ -58,14 +65,8 @@ def padEnc(text) :
     padded = pad_sequences(ranks, maxlen=cf_max_length, padding=cf_padding_type, truncating=cf_trunc_type)
     return padded
 
-def decode(arr) :
-    output = [ '{}'.format(vocab[index]) for index in arr if index in vocab.keys()]
-    return ' '.join(output).replace('_','')
-
 #%% Get a list of all mids and descs and latent vectors
-save_template = '/home/starstorms/Insight/shape/data/{}.npy'
-if remote : save_template = '/data/sn/all/data/{}.npy'
-
+save_template = cf.DATA_DIR + '/{}.npy'
 alldnp = np.load(save_template.format('alldnp'))
 all_mids = list(alldnp[:,0])
 all_descs = list(alldnp[:,1])
@@ -85,7 +86,7 @@ for mid, desc, pdesc in tqdm(zip(all_mids, all_descs, all_pdescs), total=len(all
         
 mnp, dnp, vnp, pnp = np.stack(mids), np.stack(descs), np.stack(vects), np.stack(padenc)
 
-#%%
+#%% Save / load the generated arrays to avoid having to regenerate them
 # np.save(save_template.format('mnp'), mnp) , np.save(save_template.format('dnp'), dnp) , np.save(save_template.format('vnp'), vnp) , np.save(save_template.format('pnp'), pnp)
 mnp, dnp, vnp, pnp = np.load(save_template.format('mnp')), np.load(save_template.format('dnp')), np.load(save_template.format('vnp')), np.load(save_template.format('pnp'))
 
@@ -101,21 +102,24 @@ for train_x, train_y in train_ds : pass
 for val_x, val_y in val_ds : pass
 
 #%% Make text model
-txtmodel = ts.TextSpacy(128, learning_rate=6e-4, max_length=cf_max_length, training=True) #, embeddings=embeddings)
+txtmodel = ts.TextSpacy(128, learning_rate=6e-4, max_length=cf_max_length, training=True)
 txtmodel.printMSums()
 txtmodel.model.compile(optimizer='adam', loss=tf.keras.losses.MeanSquaredError())
 loss_mean = tf.keras.metrics.Mean()
 
 #%% Setup logger info
-run_name = 'txtruns/0217-0434'
-root_dir_local = '/home/starstorms/Insight/shape/' + run_name
-root_dir_remote = '/data/sn/all/' + run_name
-lg = logger.logger(root_dir = root_dir_remote if remote else root_dir_local)
-# lg = logger.logger(trainMode=remote, txtMode=True)
+train_from_scratch = False
+if train_from_scratch :
+    lg = logger.logger(trainMode=cf.REMOTE, txtMode=True)
+else :    
+    txt_run_id = '0217-0434'
+    root_dir = os.path.join(cf.TXT_RUN_DIR, txt_run_id)
+    lg = logger.logger(root_dir)
+
 lg.setupCP(encoder=None, generator=txtmodel.model, opt=txtmodel.optimizer)
 lg.restoreCP()
 
-#%% Train model manually
+#%% Method for training the model manually
 def trainModel(num_epochs, display_interval=-1, save_interval=10, validate_interval=5) :
     print('\nStarting training...')
     txtmodel.training=True
@@ -137,7 +141,6 @@ def trainModel(num_epochs, display_interval=-1, save_interval=10, validate_inter
             
         if (epoch % save_interval == 0) :
             lg.cpSave()
-            # txtmodel.saveMyModel(lg.model_saves, lg.total_epochs)
             
         if (ut.checkStopSignal()) :
             print('Stop signal recieved...')
@@ -151,7 +154,7 @@ def trainModel(num_epochs, display_interval=-1, save_interval=10, validate_inter
 lg.writeConfig(locals(), [ts])
 trainModel(20000, save_interval=20, validate_interval=5)
 
-#%% Compare predicted and labeled vectors
+#%% Compare predicted and labeled vectors, useful sanity check on trained model
 index = 1
 for tx, tl in train_ds.take(1) : pass
 txtmodel.model.training = False
@@ -170,22 +173,34 @@ losses = np.mean(txtmodel.compute_loss(pred, tl))
 print(losses)
 
 #%% Load shape model
-shapemodel = cv.CVAE(cf_latent_dim, cf_vox_size) #, training=False)
+shapemodel = cv.CVAE(cf_latent_dim, cf_vox_size)
 shapemodel.printMSums()
 shapemodel.printIO()
 
-run_name = '0209-0306'
-root_dir_local = '/home/starstorms/Insight/shape/runs/' + run_name
-root_dir_remote = '/data/sn/all/runs/' + run_name
-lg = logger.logger(root_dir = root_dir_local if not remote else root_dir_remote)
+shp_run_id = '0209-0306'
+root_dir = os.path.join(cf.SHAPE_RUN_DIR, shp_run_id)
+lg = logger.logger(root_dir)
 lg.setupCP(encoder=shapemodel.enc_model, generator=shapemodel.gen_model, opt=shapemodel.optimizer)
 lg.restoreCP()
 
+# Method for going from text to voxels
 def getVox(text) :
     ptv = padEnc(text)
     preds = txtmodel.sample(ptv)
     vox = shapemodel.sample(preds).numpy()[0,...,0]
     return vox
+
+#%% Test text2shape model
+for i in range(20) :
+    text = input('Text description: ')
+    vox = getVox(text)
+    ut.plotVox(vox, limits=cf_limits)
+
+#%% Run on single line of text
+text = 'ceiling lamp that is very skinny and very tall. it has one head. it has a base. it has one chain.'
+tensor = tf.constant(text)
+tbatch = tensor[None,...]
+preds = txtmodel.model(tbatch)
 
 #%% Generate a balanced set of sample descriptions to show on streamlit app
 ex_descs = []
@@ -196,7 +211,7 @@ for keyword in ['Table','Chair','Lamp','Faucet','Clock','Bottle','Vase','Laptop'
             desc = dnp[np.random.randint(0,len(dnp))]
         ex_descs.append(desc)
         print(desc)
-np.save('/home/starstorms/Insight/shape/shape/data/exdnp.npy', np.array(ex_descs))
+np.save(os.path.join(cf.DATA_DIR, 'exdnp.npy'), np.array(ex_descs))
 
 #%% Generate a large set of sample descriptions to inform nearby descriptions on app
 mid2desc = {}
@@ -206,18 +221,6 @@ for mid in tqdm(shape2vec.keys()) :
         desc = dnp[rn.sample(list(indices), 1)][0]
         mid2desc[mid] = desc
 
-file = open('/home/starstorms/Insight/shape/shape/data/mid2desc.pkl', 'wb')
+file = open(os.path.join(cf.DATA_DIR, 'mid2desc.pkl'), 'wb')
 pickle.dump(mid2desc, file)
 file.close()
-
-#%% Test text2shape model
-for i in range(20) :
-    text = input('Text description: ')
-    vox = getVox(text)
-    ut.plotVox(vox, limits=cf_limits)
-
-#%% Run on single line of text
-text = ' ceiling lamp that is very skinny and very tall.  it has one head .  it has a base.  it has one chain .'
-tensor = tf.constant(text)
-tbatch = tensor[None,...]
-preds = txtmodel.model(tbatch)

@@ -3,7 +3,6 @@ import numpy as np
 import os
 import subprocess
 import re
-# if (not os.path.isdir('/data/sn/all')) : subprocess.call('sync_scripts.sh', shell=True)
 
 import skimage.measure as sm
 import time
@@ -31,9 +30,45 @@ kernel = 'none'
 
 #%% Basic Functions
 def minmax(arr) :
+    """
+    Prints the min and max of array
+    
+    Parameters
+    ----------
+    arr : np array
+        Numpy array to find min and max of
+    
+    Returns
+    -------
+    None, only prints out the min and max
+    
+    Examples
+    --------
+    > minmax(np.array([1,2,3,4,5]))
+    Min: 1
+    Max: 5
+    """    
     print('Min: {} \nMax: {}'.format(np.min(arr), np.max(arr)))
     
 def interp(vec1, vec2, divs=5, include_ends=True) :
+    """
+    Interpolates between 2 arbitrary dimension vectors and returns the result.
+    
+    Parameters
+    ----------
+    vec1 : np array
+        Starting vector to interpolate from.
+    vec2 : np array
+        Ending vector to interpolate to.
+    divs : integer
+        Number of divisions between the vectors.
+    include_ends: bool
+        Wether to include the starting and ending vectors in the output array.
+        
+    Returns
+    -------
+    Numpy array with 1 extra dimension of size divs (+ 2 if include_ends=True).
+    """   
     out = []
     amounts = np.array(range(divs+1))/divs if include_ends else np.array(range(1, divs))/divs
     for amt in amounts :
@@ -42,6 +77,20 @@ def interp(vec1, vec2, divs=5, include_ends=True) :
     return np.stack(out)
 
 def superSample(list_to_sample, samples) :
+    """
+    Samples from a list. If requested number of samples exceeds the length of the list, it repeats.
+    
+    Parameters
+    ----------
+    list_to_sample : list
+        List to sample from.
+    samples : integer
+        Number of samples to return. May be larger or smaller than the length of list_to_sample.
+        
+    Returns
+    -------
+    List of length samples that contains randomly shuffled samples from the list_to_sample.
+    """   
     pop = len(list_to_sample)
     if samples > pop :
         result = random.sample(list_to_sample, pop)
@@ -81,7 +130,6 @@ def splitData(dataset, test_split) :
     return train_dataset, test_dataset
 
 def loadData(target_vox_size, max_loads_per_cat, vox_in_dir, cat_prefixes):    
-    # vox_fps = getMixedFPs(vox_in_dir, num_models_load, cat_prefixes)    
     cat_vox_fps = [ [ os.path.join(cat, directory, 'models/model_normalized.solid.binvox') for directory in os.listdir(os.path.join(vox_in_dir, cat))] for cat in cat_prefixes ]    
     voxs, mids = [], []
     too_sparse_count = 0
@@ -145,13 +193,13 @@ def getJSON(json_fp, df=False) :
             json_file = json.load(json_file)
     return json_file
 
-def readTax(tax_fn = "/home/starstorms/Insight/ShapeNet/meta/taxonomy.json") :
+def readTax(tax_fn) :
     global tax
     tax = pd.read_json(tax_fn)
     tax['numc'] = tax.apply (lambda row: len(row.children), axis=1)
     return tax
 
-def readMeta(meta_fn = "/home/starstorms/Insight/ShapeNet/meta/dfmeta.csv") :
+def readMeta(meta_fn) :
     global meta
     meta = pd.read_csv(meta_fn)
     return meta
