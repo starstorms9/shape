@@ -35,7 +35,7 @@ class TextSpacy(tf.keras.Model):
         model.add(Bidirectional(LSTM(256, kernel_regularizer=regularizers.l2(0.001))))
         model.add(Dropout(self.dropoutRate))
         model.add(Dense(1024, activation='relu', kernel_regularizer=regularizers.l2(0.001)))
-        model.add(Dropout(self.dropoutRate))
+        model.add(Dropout(self.dropoutRate))model
         model.add(Dense(512, activation='relu', kernel_regularizer=regularizers.l2(0.001)))
         model.add(Dropout(self.dropoutRate))
         model.add(Dense(256, activation='relu', kernel_regularizer=regularizers.l2(0.001)))
@@ -94,4 +94,3 @@ class TextSpacy(tf.keras.Model):
         print("\nPer Layer:")
         for i, layer in enumerate(self.model.layers) :
             print('{:2d} : {:20} In: {:20} Out: {}'.format(i, layer.name, repr(layer.input_shape), layer.output_shape))
-

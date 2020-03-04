@@ -75,6 +75,3 @@ plot(fig, filename = 'tsne_plot.html', auto_open=False)
 #%% Save tsne vectors
 df_sl_cols_keep = ['mid', 'tsne1', 'tsne2', 'cat', 'dx', 'dy', 'dz', 'cattext', 'dsq', 'cx', 'cy', 'cz', 'csq', 'subcats']
 df_subset[df_sl_cols_keep].to_csv( os.path.join(cf.DATA_DIR, 'df_sl.csv') )
-
-
-

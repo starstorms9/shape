@@ -19,7 +19,7 @@ import pickle
 from scipy import spatial
 import skimage.measure as sm
 
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as pltmodel
 import matplotlib.image as mpimg
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D

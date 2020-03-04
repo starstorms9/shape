@@ -288,10 +288,3 @@ start_indices = {
 
 #%% Start the journey based on the previously selected indices
 journey(journey_length = 20, vects_sample=8, max_dist=8, interp_points=6, plot_step=2, start_index = start_indices['Table'][2])
-
-
-
-
-
-
-

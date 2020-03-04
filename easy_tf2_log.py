@@ -40,7 +40,7 @@ class Logger(object):
         self.writer = None  # type: Union[None, pywrap_tensorflow.EventsWriter, tf.summary.FileWriter]
 
         if log_dir is None and writer is None:
-            log_dir = 'logs'
+            log_dir = 'logs'model
             self.set_log_dir(log_dir)
         elif log_dir is not None and writer is None:
             self.set_log_dir(log_dir)
@@ -112,3 +112,4 @@ def tflog(key, value, step=None):
     if not Logger.DEFAULT:
         set_dir('logs')
     Logger.DEFAULT.log_key_value(key, value, step)
+    

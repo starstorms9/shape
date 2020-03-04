@@ -28,7 +28,7 @@ else :          # Running locally
     VOXEL_FILEPATH = '/home/starstorms/Insight/ShapeNet/all'
     '''
     This is the location of the data from the ShapeNetCore database downloaded from here: https://www.shapenet.org/
-        (note that to actually download the data you need an approved account)
+        (note that to actually download the data you need an appromodelved account)
     Note that while the folder structure from the zip file is required, only the model_normalized.solid.binvox files are necessary to 
         actually be present in the models folder. All of the other data in the ShapeNetCore zip file is not used so it doesn't need to be extracted.
     
@@ -102,7 +102,4 @@ else :          # Running locally
         into the same folder structure to save space.
         
     Specifically, only the meta.json and result_after_merging.json files are necessary.
-    '''
-    
-    
-    
+    '''   

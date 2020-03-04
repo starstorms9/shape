@@ -124,3 +124,4 @@ class logger():
     
     def updatePlotDir(self):
         ut.plot_out_dir = self.plot_out_dir
+        
