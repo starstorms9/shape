@@ -1,44 +1,45 @@
+'''
+This file is how the descriptions are generated. It must be ran after partnetmeta.py as it uses the data from that file.
+
+It is broken up into 5 subparts:
+    1. Loading in spacy and exploring it's capabilities
+    2. Loading in the data from the partnetmeta output
+    3. Shape class that takes in various information about an object and stores it so that it can be sampled for randomized descriptions later.
+    4. Shape description methods that gather the information for the shape class from the dfmeta file
+    5. Generate the descriptions, save them to file, and inspect the descriptions for quality.
+'''
+
 #%% Imports
 import numpy as np
 import os
 from sklearn.metrics.pairwise import cosine_similarity
 from collections import Counter
-import time
-import json
 import pandas as pd
 import random
-import pickle
-import re
 from tqdm import tqdm
 import random as rn
-import nltk
 import inflect
 import spacy
 from nltk.corpus import wordnet as wn
 import math
 
 import utils as ut
+import configs as cf
 
-import matplotlib.pyplot as plt
 np.set_printoptions(precision=3, suppress=True)
-remote = os.path.isdir('/data/sn/all')
 
-#%% Setup text processing
+#%% Setup text processing and load in dfmeta
 inflect = inflect.engine()
-
-# nltk.download()
 vocab = set()
 corpdict = {}
 
 cats_to_load = ['Table','Chair','Lamp','Faucet','Clock','Bottle','Vase','Laptop','Bed','Mug','Bowl']
 catids_to_load = [4379243,3001627,3636649,3325088,3046257,2876657,3593526,3642806,2818832,3797390,2880940]
 
-meta_fp_local = '/home/starstorms/Insight/ShapeNet/meta/dfmeta.csv'
-meta_fp_remote = '/data/sn/all/meta/dfmeta.csv'
-dfmeta = pd.read_csv(meta_fp_remote if remote else meta_fp_local)
+dfmeta = pd.read_csv(cf.META_DATA_CSV)
 dfdesc = dfmeta[dfmeta.details.notnull()]
 
-#%% Setup spacy
+#%% Setup spacy and some related methods
 def get_embeddings(vocab):
         max_rank = max(lex.rank for lex in vocab if lex.has_vector)
         vectors = np.ndarray((max_rank+1, vocab.vectors_length), dtype='float32')
@@ -47,59 +48,29 @@ def get_embeddings(vocab):
                 vectors[lex.rank] = lex.vector
         return vectors
 
-nlp = spacy.load('en_core_web_md')
-embeddings = get_embeddings(nlp.vocab)
-
-#%% Playing with Spacy
-vector1 = nlp("large")[0].vector
-vector2 = nlp("small")[0].vector
-vector3 = vector1 - vector2
-
-vector4 = nlp("high")[0].vector
-vector5 = vector3 + vector4
-
-
-cvs = closestVect(nlp("high")[0].vector)
-cvs = closestVect(vector5)
-for w in cvs : print(w.text)
-
-
-#%%tvec = nlp("Queen")[0].vector
-most_similar = nlp.vocab.vectors.most_similar(tvec.reshape(1,tvec.shape[0]))
-
-result = nlp.vocab.vectors.most_similar(vector1)
-result = nlp.vocab.vectors.most_similar(vector2)
-result = nlp.vocab.vectors.most_similar(vector3)
-
-i = nlp.vocab.vectors.key2row[5247273317732208552]
-nlp.vocab.vectors.data[i]
-
-
-#%%
 def most_similar(word):
    queries = [w for w in word.vocab if w.is_lower == word.is_lower and w.prob >= -15 and w.has_vector]
    by_similarity = sorted(queries, key=lambda w: word.similarity(w), reverse=True)
    return by_similarity[:10]
 
-def closestVect(vect):
+def closestVect(vect, num_to_get=10):
    queries = [w for w in nlp.vocab if w.prob >= -15 and w.has_vector]
    by_similarity = sorted(queries, key=lambda w: cosine_similarity(w.vector.reshape(1,-1), vect.reshape(1,-1)), reverse=True)
-   return by_similarity[:10]
+   return by_similarity[:num_to_get]
 
-model_embeds = txtmodel.layers[0].get_weights()[0]
-siminlp = lambda x, y : cosine_similarity(nlp.vocab[x].vector.reshape(1,-1), nlp.vocab[y].vector.reshape(1,-1))[0][0]
-simmodel = lambda x,y : cosine_similarity(model_embeds[nlp.vocab[x].rank].reshape(1,-1), model_embeds[nlp.vocab[y].rank].reshape(1,-1))[0][0]
+nlp = spacy.load('en_core_web_md')
+embeddings = get_embeddings(nlp.vocab)
 
-def compareSim(x,y) :
-    print('{:.3f}  {:.3f}'.format(siminlp(x,y), simmodel(x,y)))
+#%% Seeing what the closest vector is in vector space
+cvs = closestVect(nlp("high")[0].vector)
+for w in cvs : print(w.text)
 
-#%%
+#%% Using the builtin spacy method to do the same as above for comparison
 syns = most_similar(nlp.vocab['high'])
 for w in syns:
     print(w.text, w.cluster)
 
-
-#%% Part of speech tagging
+#%% Part of speech tagging testing
 samples=  [
     'easy chair that is very small and very tall and very thin. it has two wide chair arms that are large. it has two legs. it has two runners.',
     'easy couch that is average size and regular height and wide.  it has two sofa style chair arms .  it has four legs .',
@@ -128,29 +99,7 @@ for item in text :
     print('{:10}  {}'.format(item.text, [syn.name().split('.')[0] for syn in wn.synsets(item.text, pos=wn.ADJ)[:10] if not syn.name().split('.')[0] == item.text]))
 wn.synset('tall.a.01').lemmas()[0].antonyms()
 
-#%%
-'''
-Input conditioning:
-    1. Replace #'s with letter numbers or 'many'
-    2. Remove any commas
-    3. Fix spacing and periods like fixDesc
-    4. replace it's / its with it is
-    5. replace an with a
-    6. replace doesn't / doesnt with does not
-    
-Ways to describe things:
-    1. a _ thing
-    2. a thing that is _
-    3. a thing. it is _
-    
-combiners = ['that has', 'made of', 'with']
-Ways to describe things:
-    1. a thing <combiner> _
-    2. a thing. it has / it is made of / 
-    3. 
-'''
-
-#%%
+#%% Shape class that can take in a set of standardized items and generate random descriptions based on those
 class shape() :
     replacements = {
     '   ' : ' ',
@@ -328,29 +277,8 @@ class shape() :
             desc = desc.replace(fix, self.replacements[fix])
         return desc
 
-# test = shape('table', 'desk', ['large', 'very tall', ' very wide', 'long'], ['decorative', 'empty', 'curvy'], ['four legs', 'two drawers', 'two hands', 'books'], ['cabinet', 'pencil'], ['soil', 'plant'])
-# print(test.getDesc())
-
-#%% Aggregator method
-def augmentMutli(mids) :
-    mids = list(np.squeeze(np.array(mids)))
-    descs = [augmentDesc(  (mid.decode() if type(mid)==bytes else mid )  ) for mid in mids]
-    # descs = [augmentDesc(  (mid.decode if type(mid)==bytes else mid )  ) for mid in mids]
-    return descs
-
-def augmentDescMany(mid, count) :
-    return [augmentDesc(mid) for _ in range(count)]
-
-def augmentDesc(mid) :
-    row = dfdesc[dfdesc.mid==mid]
-    row = addInSubcat(row)
-    row = addShapeDesc(row)
-    row = deleteSentences(row, rate=.4)
-    row = shuffleSentences(row)    
-    row = fixPuncs(row)    
-    return row.desc.values[0]
-
 '''
+Table of category info for reference :
 0   04379243   Table    8436
 1   03001627   Chair    6778
 2   03636649   Lamp     2318
@@ -362,9 +290,9 @@ def augmentDesc(mid) :
 8   02818832   Bed      233
 9   03797390   Mug      214
 10  02880940   Bowl     186
-'''
 
-'''
+High level notes for how the descriptions were generated for each subcategory:
+    
 Bed:    -special cases for subcats
         -if just 'bed' check if 'hammock'
         -note number of pillows
@@ -390,94 +318,35 @@ Faucet: -Just faucet, spigot, or sink (rarely) for subcat.
         -Note sum of qtys of frames in level 2 as parts if > 1. could be switches, spigots, or other
             
 Clock:  rare subcat. note foot(s), box, screen, . # of chains. any qtys > 1. note 'base' if present. if nothing notable, note rare thing. ignore 'alarm' in subcats, use 'alarm clock'. note any foot(s)
+
 Bottle: rare subcat. note 'lid', 'neck', 'mouth', 'handle'(s), ''. 'closure'/'lid'
+
 Vase:   rare subcat. note 'lid', 'base' if present.
         note what it contains (may be nothing, or 'liquid or soil' or 'plant'). note if its empty. note nots.
         shape just note tall / short and wide / skinny
 Laptop: laptop/computer. Note touchpad, keyboard, and screen. Note if screen closed
+
 Mugs:  rare subcat. Note containing things or empty. Note handle or no. Note multiple handles
+
 Bowls: just bowl. If containing things then say it's full. Note any qty > 1 items. note if it has a 'bottom' which is a base
 
 '''
 
-#%% Setup class balancer
-balancer = { 
-'Table' : 1,
-'Chair' : 1.4,
-'Lamp' : 1.5,
-'Faucet' : 1.8,
-'Clock' : 1.3,
-'Bottle' : 1.4,
-'Vase' : 1.4,
-'Laptop' : 1.2,
-'Bed' : 3.5,
-'Mug' : 2.5,
-'Bowl' : 2.9 }
-
-#%% Make descriptions
-all_descs = []
-for mid in tqdm(dfmeta.mid) :
-    if (type(mid) == float) : continue
-    row = dfmeta[dfmeta.mid == mid].iloc[0]
-    if (not type(row.details) == float and len(row.details) > 1) :
-        sh = dRow(row)
-        for i in range(int(sh.getComplexity() * balancer[row.cattext] * 1)) :
-            all_descs.append([mid, sh.getDesc()])
-            
-dnp = np.stack(all_descs)
-
-#%% Word count stats
-total = 0
-maxlen = 0
-for d in dnpold[:,1] :
-    numwords = len(d.split())
-    total += numwords
-    maxlen = max(numwords, maxlen)
-    
-num_unique_descs = np.unique(dnpold[:,1]).shape[0]
-print('Average words per desc: {:.1f} \nMax words: {} \nUnique descs: {} / {}  = {:.1f}%'.format(total / len(dnpold[:,1]), maxlen, num_unique_descs, len(dnpold), 100 * num_unique_descs / len(dnpold)))
-
-#%% Save descriptions
-np.save('/home/starstorms/Insight/shape/data/alldnp.npy', dnp, allow_pickle=True)
-
-dnpold = np.load('/home/starstorms/Insight/shape/data/alldnp.npy', allow_pickle=True)
-
-#%% Inspect some objects
-catid = 0
-while True:
-    index = rn.randint(1, len(dfdesc)-1)
-    row = dfdesc.iloc[index]
-    if (not row.cattext == cats_to_load[catid]) : continue
-    # if (row.cattext == cats_to_load[0] or row.cattext == cats_to_load[1]) : continue
-    print('-------------------------------------------{}------------------------------------------------'.format(index))
-    print('{:20}    {}'.format(row.cattext, row.mid))
-
-    # subcats = row.subcats.split(',')
-    # rarity = 9999
-    # try : 
-    #     for cat in subcats :
-    #         rarity = min(rarity, getFreq(cat))
-    #         print('{:5d}  {}'.format(getFreq(cat), cat))
-    # except : ' {} not in corpus '.format(cat)
-    # if (rarity > 200) : continue
-    
-    # print(getShapeDesc(row)[1])
-    # printDetArr(detToArr(row.details))
-    # printShapeClasses(row)
-    sh = dRow(row)
-    print(sh)
-    for i in range(int(sh.getComplexity() * balancer[row.cattext] * 1)) :
-        print(sh.getDesc())
-    
-    ut.showPic(dfdesc.iloc[index].mid,title=index)
-    try : 
-        i = input('')
-        if i=='s' : 
-            print('showing binvox...')
-            ut.showBinvox(row.mid)
-    except (KeyboardInterrupt, SystemExit): break
-
 #%% Shape description methods
+'''
+These methods take in a row of the dfmeta file and populate a standardized set of items that the shape class
+then uses to generate randomized descriptions. It may use any subset of the available items.
+
+From dfmeta these methods get :
+    1. subcat       : The subcategory. For example, a chair may specfically be a swivel chair.
+    2. sdescriptors : Shape descriptors. Changes for each category but could be like tall for chairs or thick for clocks. Every category method is preceded by a ...sizes lists which defines which axes correspond to which shape descriptions.
+    3. gdescriptors : General descriptors. For example, could be a decorative or jointed lamp.
+    4. spnames      : Sub part names. A listing of all interesting sub parts contained in the tree. Interesting defined as relatively rare.
+    5. negatives    : Things that this object doesn't have that other similar objects often do.
+    6. contains     : If it contains anything. Only relevant for a few categories like vase which could contain a plant or soil or a bowl that could be full or empty.
+'''
+
+# The main method that selects which row to specific method to use
 def dRow(row) :
     if   row.cattext == 'Bowl': return dBowl(row)
     elif row.cattext == 'Mug': return dMug(row)
@@ -1010,6 +879,7 @@ def dBowl(row) :
     cshape = shape(row.cattext, subcat, sdescriptors, gdescriptors, spnames, negatives, contains)
     return cshape
 
+#%% Helper methods
 def clamp(value, minv, maxv) :
     return int(max(min(value, maxv), minv))
 
@@ -1045,30 +915,11 @@ def printDetArr(det, max_level=10) :
         freq = corpdict[name]
         print('{:1d} :{:2d} :{:2d} : {:5d} : {}{}'.format(level, children, quantity, freq, '  '*int(level+1), name))
 
-# self.name, level, children, quantity
+# The details array contains: [self.name, level, children, quantity]
 def detToArr(details) :
     dets = [[item.strip() for item in d.split(',')] for d in (' '+details).split('|')[:-1]]
     dets = np.array(dets)
     return dets
-
-def printShapeClasses(row) :
-    cx, cy, cz, csq = row.cx, row.cy, row.cz, row.csq
-    template = '   {}  {}   {:13}  {:.3f}'
-    print(template.format('X ', cx, sizes[0][cx], row.dx))
-    print(template.format('Y ', cy, sizes[0][cy], row.dy))
-    print(template.format('Z ', cz, sizes[0][cz], row.dz))
-    print(template.format('SQ', csq, sizes[0][csq], row.dsq))
-    
-def getShapeDesc(row) :
-    cx = row.cx
-    cy = row.cy
-    cz = row.cz
-    csq = row.csq      
-    descriptors = [sizes[0][cx], sizes[1][cy], sizes[2][cz], sizes[3][csq]]
-    extreme = np.array((cx,cy,cz,csq))
-    eid = np.argmax(abs(extreme-2))
-    ext_descriptor = sizes[eid][extreme[eid]]
-    return descriptors, ext_descriptor
 
 def listSubcats(catid) :
     allsubcats = []
@@ -1134,3 +985,67 @@ def buildCorpus(dfdesc):
 
 if len(corpdict) < 5 :
     buildCorpus(dfdesc)
+    
+
+#%% Setup class balancer. These numbers are based on estimates for how much attention each category requires relative to how many samples are available.
+balancer = { 
+'Table' : 1,
+'Chair' : 1.4,
+'Lamp' : 1.5,
+'Faucet' : 1.8,
+'Clock' : 1.3,
+'Bottle' : 1.4,
+'Vase' : 1.4,
+'Laptop' : 1.2,
+'Bed' : 3.5,
+'Mug' : 2.5,
+'Bowl' : 2.9 }
+
+#%% Generate all descriptions and stack them into a numpy array
+all_descs = []
+for mid in tqdm(dfmeta.mid) :
+    if (type(mid) == float) : continue
+    row = dfmeta[dfmeta.mid == mid].iloc[0]
+    if (not type(row.details) == float and len(row.details) > 1) :
+        shape_object = dRow(row)
+        for i in range(int(shape_object.getComplexity() * balancer[row.cattext])) :
+            all_descs.append([mid, shape_object.getDesc()])
+            
+dnp = np.stack(all_descs)
+
+#%% Get word count stats for the generated descriptions
+total = 0
+maxlen = 0
+for d in dnp[:,1] :
+    numwords = len(d.split())
+    total += numwords
+    maxlen = max(numwords, maxlen)
+    
+num_unique_descs = np.unique(dnp[:,1]).shape[0]
+print('Average words per desc: {:.1f} \nMax words: {} \nUnique descs: {} / {}  = {:.1f}%'.format(total / len(dnp[:,1]), maxlen, num_unique_descs, len(dnp), 100 * num_unique_descs / len(dnp)))
+
+#%% Save descriptions to file
+np.save(os.path.join(cf.DATA_DIR, 'alldnp.npy'), dnp, allow_pickle=True)
+
+#%% Inspect some objects and their generated descriptions
+catid = 0
+
+while True:
+    index = rn.randint(1, len(dfdesc)-1)
+    row = dfdesc.iloc[index]
+    if (not row.cattext == cats_to_load[catid]) : continue
+    print('-------------------------------------------{}------------------------------------------------'.format(index))
+    print('{:20}    {}'.format(row.cattext, row.mid))
+
+    sh = dRow(row)
+    print(sh)
+    for i in range(int(sh.getComplexity() * balancer[row.cattext] * 1)) :
+        print(sh.getDesc())
+    
+    ut.showPic(dfdesc.iloc[index].mid,title=index)
+    try : 
+        i = input('')
+        if i=='s' : 
+            print('showing binvox...')
+            ut.showBinvox(row.mid)
+    except (KeyboardInterrupt, SystemExit): break

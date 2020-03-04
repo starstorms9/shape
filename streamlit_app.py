@@ -1,3 +1,11 @@
+'''
+This is the streamlit app for my Insight AI 2020A.SV project.
+All file references are relative to the this file in the github project so that it works with streamlit for teams (SL4T).
+
+The app can be launched locally by using a terminal to navigate to the directory of this .py file and running this command:
+    streamlit run streamlit_app.py
+'''
+
 import streamlit as st
 header = st.title('')
 header.header("Importing libraries...")

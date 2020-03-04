@@ -1,11 +1,16 @@
+'''
+This file is the shape encoder model which is a convolutional variational autoencoder.
+It contains both the encoder and decoder part of the model.
+'''
+
 #%% Imports
 import tensorflow as tf
-from tensorflow.keras.layers import Dense, Conv3D, Conv3DTranspose, InputLayer, Flatten, Reshape, BatchNormalization, Dropout
+from tensorflow.keras.layers import Dense, Conv3D, Conv3DTranspose, InputLayer, Flatten, Reshape, Dropout
 from tensorflow.keras import regularizers
 import numpy as np
 import os
 
-#%% VAE Class
+#%% CVAE Class that extends the standard keras model
 class CVAE(tf.keras.Model):
     def __init__(self, latent_dim, input_dim, learning_rate=6e-4, training=True):
         super(CVAE, self).__init__()

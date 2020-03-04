@@ -1,22 +1,28 @@
+'''
+This file is used to read in the json files that contain the metadata from the PartNet meta data files and ultimately creates the first round of the dfmeta file.
+It uses some complicated tree structures to capture the data and attempt to generate a description.
+However, this method was mostly overwritten by the descriptor.py file which uses a different methodology to make the descriptions.
+But that file still uses a large amount of the data generated here.
+
+This file is only intended to be run locally.
+'''
+
 #%% Imports
 import json
-import utils as ut
-
 import os
 import inflect
-import nltk
 from nltk.corpus import wordnet as wn
-import random as rn
 import pandas as pd
 import pandas_ods_reader as por
 import matplotlib.pyplot as plt
 import numpy as np
 from tqdm import tqdm
+
 import utils as ut
+import configs as cf
 
 #%% Setup text processing
 inflect = inflect.engine()
-# nltk.download()
 vocab = set()
 
 #%% Define loadset
@@ -62,7 +68,7 @@ def getAndPrintJSON(index, dir_fp, reverse=False, verbose=False) :
     return output
             
 #%% Get all JSON data
-json_dir = '/home/starstorms/Insight/ShapeNet/partnetmeta/stats/'
+json_dir = cf.PARTNET_META_STATS_DIR
 json_fps = os.listdir(json_dir)
     
 data = []
@@ -322,6 +328,8 @@ class Node:
             return '{} that is {}'.format( self.name, new_children[0].dRootVase() )
 
 '''
+Exampple descriptions and tree structures :
+    
 a chair that has a chair back and a chair seat. the chair back is made of a back surface with a back 
     single surface. the chair seat is made of a seat surface with a seat single surface.
  0 : 6 : 1 : chair
@@ -473,7 +481,7 @@ for col1, col2 in zip(dffixcols, dfclasscols) :
         dfall[col2].loc[dfall.cat==catid_uniq] = pd.qcut(dfall[col1].loc[dfall.cat==catid_uniq], labels=False, q=qbins, precision=0, duplicates='drop')
 
 #%% Show distributions of various size extremes in each dimension
-for catid in cats_to_load :    
+for catid in cats_to_load :
     dfds = dfall[dfall.cattext == catid][dfnormcols]
     
     for i, d in enumerate(dfnormcols) :

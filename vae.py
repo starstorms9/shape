@@ -1,15 +1,14 @@
-%load_ext autoreload
-%autoreload 2
-# Sync scripts
-!sync_scripts.sh
-# Sync runs
-!sync_runs.sh 
-# Delete emptry dirs in runs/
-!find /home/starstorms/Insight/shape/runs/  -empty -type d -delete
-!find /data/sn/all/runs -empty -type d -delete
+'''
+This file is used to train the shape autoencoder model.
 
-import os
-os.chdir('/data/sn/all/scripts/')
+It uses cvae.py as the base model and many data functions from utils to make it simpler.
+
+It also has various methods for exploring a trained model to see how well it can reconstruct models and
+interpolate between various reconstructions.
+
+At the end there is a method called 'journey' which extends on the idea of interpolating between 2 chosen models
+and chooses the models automatically on repeat to create cool interpolation animations.
+'''
 
 #%% Imports
 import numpy as np
@@ -31,6 +30,7 @@ from tqdm import tqdm
 import cvae as cv
 import utils as ut
 import logger
+import configs as cf
 
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
@@ -40,9 +40,7 @@ import plotly.figure_factory as FF
 import plotly.express as px
 from sklearn.manifold import TSNE
 import seaborn as sns
-
 import tensorflow as tf
-remote = os.path.isdir('/data/sn/all')
 
 #%% Setup
 '''
@@ -68,7 +66,7 @@ cf_max_loads_per_cat = 10000 if remote else 50
 cf_batch_size = 40
 cf_learning_rate = 4e-4
 cf_limits=[cf_vox_size, cf_vox_size, cf_vox_size]
-ut.readMeta('/data/sn/all/meta/dfmeta.csv') if remote else ut.readMeta()
+ut.readMeta()
 
 #%% Make model and print info
 model = cv.CVAE(cf_latent_dim, cf_vox_size, cf_learning_rate, training=True)
@@ -77,25 +75,27 @@ model.printMSums()
 model.printIO()
 
 #%% Setup logger info
-run_name = '0209-0306'
-root_dir_local = '/home/starstorms/Insight/shape/runs/' + run_name
-root_dir_remote = '/data/sn/all/runs/' + run_name
-lg = logger.logger(root_dir = root_dir_remote if remote else root_dir_local)
-# lg = logger.logger()
-lg.setupCP(encoder=model.enc_model, generator=model.gen_model, opt=model.optimizer)
-lg.restoreCP() #'/home/starstorms/Insight/shape/runs/0204-2220/models/ckpt-71')
+train_from_scratch = False
+if train_from_scratch :
+    lg = logger.logger(trainMode=cf.REMOTE, txtMode=False)
+else :    
+    shp_run_id = '0209-0306'
+    root_dir = os.path.join(cf.SHAPE_RUN_DIR, shp_run_id)
+    lg = logger.logger(root_dir)
+
+lg.setupCP(encoder=shapemodel.enc_model, generator=shapemodel.gen_model, opt=shapemodel.optimizer)
+lg.restoreCP()
 
 #%% Load all data
-# vox_in_dir = '/home/starstorms/Insight/ShapeNet/all/'
+# WARNING - Requires signifcant RAM, only do remotely. If local use the some_* files instead for testing
 all_voxs, all_mids = ut.loadData(cf_vox_size, cf_max_loads_per_cat, lg.vox_in_dir, cf_cat_prefixes)
 
 #%% Save base train data to file
-save_dir = '/data/sn/all/data' if remote else '/home/starstorms/Insight/shape/data'
-# np.save(os.path.join(save_dir, 'some_voxs.npy'), all_voxs, allow_pickle=True)
-# np.save(os.path.join(save_dir, 'some_mids.npy'), all_mids, allow_pickle=True)
+np.save(os.path.join(cf.DATA_DIR, 'some_voxs.npy'), all_voxs, allow_pickle=True)
+np.save(os.path.join(cf.DATA_DIR, 'some_mids.npy'), all_mids, allow_pickle=True)
 
 #%% Load base train data from file
-prefix = 'all' if remote else 'some'
+prefix = 'all' if cf.REMOTE else 'some'
 all_voxs = np.load(os.path.join(save_dir, prefix+'_voxs.npy'), allow_pickle=True)
 all_mids = np.load(os.path.join(save_dir, prefix+'_mids.npy'), allow_pickle=True)
 
@@ -110,7 +110,7 @@ train_dataset = train_dataset.batch(cf_batch_size, drop_remainder=True)
 test_dataset = test_dataset.batch(cf_batch_size, drop_remainder=False)
 
 total_train_batchs = 0
-for _ in train_dataset : total_train_batchs = total_train_batchs + 1
+for _ in train_dataset : total_train_batchs += 1
 
 #%% Show initial models
 sample_index = 16
@@ -160,88 +160,120 @@ def trainModel(epochs, display_interval=-1, save_interval=10, test_interval=10) 
         lg.incrementEpoch()
     return
 
-#%% Train
+#%% Train model
 lg.writeConfig(locals(), [cv.CVAE, cv.CVAE.__init__])
 lg.updatePlotDir()
-trainModel(5000, display_interval=2, save_interval=5, test_interval=2)
+trainModel(20, display_interval=2, save_interval=5, test_interval=2)
 
 
-
-
-
-
-
-#%% Show reconstructed models
-model.training = False
-for i in range(30) : ut.showReconstruct(model, test_samples, index=i, title='Index: {}'.format(i), show_original=True, show_reconstruct=True, limits=cf_limits)
-
-#%% Generate new designs
-num_examples_to_generate = 5
-vect_shape = tuple([num_examples_to_generate] + list(model.gen_model.input_shape[1:]))
-random_vector_for_generation = tf.random.normal(shape=vect_shape)
-gen_vect = random_vector_for_generation
-
-v = model.sample(gen_vect)
-v = v.numpy()[:,:,:,:,0]
-
-for i, sample in enumerate(v) :
-    ut.plotVox(sample, step=1, threshold=0.5, title='Index {}'.format(i), limits=cf_limits)
-
-#%% See some reconstructed models    
-'''
-0   04379243   Table    8436  :  1   03001627   Chair    6778  :  2   03636649   Lamp     2318
-3   03325088   Faucet   744   :  4   03046257   Clock    651   :  5   02876657   Bottle   498
-6   03593526   Vase     485   :  7   03642806   Laptop   460   :  8   02818832   Bed      233
-9   03797390   Mug      214   :  10  02880940   Bowl     186
-'''
-model.training = False
-num_to_get = 10
-cat_label_index = -2
-anchors, labels = [],[]
-for anchor, label in train_dataset.unbatch().shuffle(100000).take(num_to_get*50) :
-    catid = -1
-    try: catid = cf_cat_prefixes.index('0{}'.format(ut.getMidCat(label.numpy().decode())))
-    except : print('not found\n ', label.numpy().decode())
-    if (catid == cat_label_index or cat_label_index==-2) :
-        anchor = tf.cast(anchor, dtype=tf.float32)
-        anchors.append(anchor)
-        labels.append(label)
-    if (len(anchors) >= num_to_get) :
-        break
+#%% Methods for exploring the design space and getting a feel for model performance 
+def getRecons(num_to_get=10, cat_label_index=-2) :
+    model.training = False
+    anchors, labels = [],[]
+    for anchor, label in train_dataset.unbatch().shuffle(100000).take(num_to_get*50) :
+        catid = -1
+        try: catid = cf_cat_prefixes.index('0{}'.format(ut.getMidCat(label.numpy().decode())))
+        except : print('not found\n ', label.numpy().decode())
+        if (catid == cat_label_index or cat_label_index==-2) :
+            anchor = tf.cast(anchor, dtype=tf.float32)
+            anchors.append(anchor)
+            labels.append(label)
+        if (len(anchors) >= num_to_get) :
+            break
     
-anchor_vects = [model.encode(anchors[i][None,:,:,:], reparam=True) for i in range(len(anchors))]
-v = [model.sample(anchor_vects[i]).numpy()[0,...,0] for i in range (len(anchors))]
-
-for i, sample in enumerate(v) :
-    print('Index: {}   Mid: {}'.format(i, labels[i].numpy().decode()))
-    ut.plotVox(anchors[i].numpy()[...,0], step=1, threshold=0.5, title='Index {} Original'.format(i), limits=cf_limits)
-    ut.plotVox(v[i], step=2, threshold=0.5, title='Index {} Reconstruct'.format(i), limits=cf_limits) 
+    anchor_vects = [model.encode(anchors[i][None,:,:,:], reparam=True) for i in range(len(anchors))]
+    v = [model.sample(anchor_vects[i]).numpy()[0,...,0] for i in range (len(anchors))]
     
-print([mid.numpy().decode() for mid in labels])
+    for i, sample in enumerate(v) :
+        print('Index: {}   Mid: {}'.format(i, labels[i].numpy().decode()))
+        ut.plotVox(anchors[i].numpy()[...,0], step=1, threshold=0.5, title='Index {} Original'.format(i), limits=cf_limits)
+        ut.plotVox(v[i], step=2, threshold=0.5, title='Index {} Reconstruct'.format(i), limits=cf_limits) 
+        
+    print([mid.numpy().decode() for mid in labels])
+    return anchor_vects, labels
 
-#%% Interpolate between 2 set reconstructions
-index1, index2 = 3,5
-mids_string = ' {} , {} '.format(labels[index1].numpy().decode(), labels[index2].numpy().decode())
-print(mids_string)
-interp_vects = ut.interp(anchor_vects[index1].numpy(), anchor_vects[index2].numpy(), divs = 10)
+def interpolateDesigns(anchor_vects, labels, index1, index2, divs=10) :
+    mids_string = ' {} , {} '.format(labels[index1].numpy().decode(), labels[index2].numpy().decode())
+    print(mids_string)
+    interp_vects = ut.interp(anchor_vects[index1].numpy(), anchor_vects[index2].numpy(), divs)
+    
+    v = model.sample(interp_vects)
+    v = v.numpy()[:,:,:,:,0]
+    for i, sample in enumerate(v) :    
+        ut.plotVox(sample, step=1, threshold=0.5, limits=cf_limits, show_axes=False)
 
-v = model.sample(interp_vects)
-v = v.numpy()[:,:,:,:,0]
-for i, sample in enumerate(v) :    
-    ut.plotVox(sample, step=1, threshold=0.5, limits=cf_limits, show_axes=False )
+#%% See a random samplling of reconstructions to choose which ones to interpolate between
+'''
+A list of categories and indices for reference :
+0   04379243   Table    8436  |  1   03001627   Chair    6778  |  2   03636649   Lamp     2318
+3   03325088   Faucet   744   |  4   03046257   Clock    651   |  5   02876657   Bottle   498
+6   03593526   Vase     485   |  7   03642806   Laptop   460   |  8   02818832   Bed      233
+9   03797390   Mug      214   |  10  02880940   Bowl     186
+'''
+anchor_vects, labels = getRecons(num_to_get=10, cat_label_index=8)
+        
+#%% Interpolate between 2 set reconstructions from the previous method
+interpolateDesigns(anchor_vects, labels, 3, 5)
 
-#%% Interpolate from 1 fixed vect to random direction
-index = 7
-vect2 = anchor_vects[index] + (np.random.rand(anchor_vects[0].shape[0]) - 0.5) * 10
-interp_vects = ut.interp(vect2, anchor_vects[index], divs = 10)
+#%% Run model on all data to get latent vects and loss. Used for streamlit app and other places.
+shape2loss = {}
+shape2vec = {}
+for sample, label in tqdm(zip(all_voxs, all_mids), unit_scale=True, desc="Saving shape 2 vec: ", unit=" encodes", total=len(all_voxs))  :
+    sample = tf.cast(sample, dtype=tf.float32)
+    shape2vec[label] = model.encode(sample[None,...], reparam=True).numpy()[0]
+    shape2loss[label] = model.compute_loss(sample[None,...]).numpy()    
+    
+ut.savePickle(os.path.join(lg.root_dir,"shape2vec.pkl"), shape2vec)
+ut.savePickle(os.path.join(lg.root_dir,"shape2loss.pkl"), shape2loss)    
 
-v = model.sample(interp_vects)
-v = v.numpy()[:,:,:,:,0]
-for i, sample in enumerate(v) :    
-    ut.plotVox(sample, step=1, threshold=0.5, limits=cf_limits, show_axes=False, )
+#%% Shapetime journey code for fun. Shapetime journey methods :
+def showRandIndices(num_to_show=100) :
+    for i in np.random.randint(0, len(shape2vec), size=num_to_show) :
+        vox = shapemodel.decode(shape2vec[mids[i]][None,...], apply_sigmoid=True)[0,...,0]    
+        ut.plotVox(vox, step=2, limits = cf_limits, title=i)
+        
+def journey(journey_length = 20, vects_sample=8, max_dist=8, interp_points=6, plot_step=2, start_index = 715)
+    model.training=False    
+    journey_vecs = []
+    visited_indices = [start_index]
+    journey_mids = []
+    
+    mids = list(shape2vec.keys())
+    vecs = np.array([shape2vec[m] for m in mids])
+    vec_tree = spatial.KDTree(vecs)
+    start_vect = shape2vec[mids[start_index]]
+    journey_mids.append(mids[start_index])
+    
+    for i in range(journey_length) :
+        n_dists, close_ids = vec_tree.query(start_vect, k = vects_sample, distance_upper_bound=max_dist)
+        if len(shape2vec) in close_ids :
+            n_dists, close_ids = vec_tree.query(start_vect, k = vects_sample, distance_upper_bound=max_dist*3)    
+        close_ids = list(close_ids)  #[:1000]
+        
+        for index in sorted(close_ids, reverse=True):
+            if index in visited_indices:
+                close_ids.remove(index)
+        
+        next_index = random.choice(close_ids)
+        next_vect = vecs[next_index]
+        visited_indices.append(next_index)
+        interp_vects = ut.interp(next_vect, start_vect, divs = interp_points)
+        journey_vecs.extend(interp_vects)
+        start_vect = next_vect
+        journey_mids.append(mids[next_index])
+        
+    journey_voxs = np.zeros(( len(journey_vecs), cf_vox_size, cf_vox_size, cf_vox_size))
+    for i, vect in enumerate(journey_vecs) :
+        journey_voxs[i,...] = model.decode(vect[None,...], apply_sigmoid=True)[0,...,0]
+    
+    for i, vox in enumerate(journey_voxs) :
+        ut.plotVox(vox, step=plot_step, limits = cf_limits, title='', show_axes=False)
 
-#%% Define some good starting indices
-sindices = {
+#%% Start by randomly searching for some object indices to start from
+showRandIndices(100)
+
+#%% Remember good starting indices for various categories
+start_indices = {
     'Table'  : [7764, 6216, 3076, 2930, 715, 3165],
     'Chair'  : [9479, 13872, 12775, 9203, 9682, 9062, 8801, 8134, 12722, 7906, 10496, 11358, 13475, 9348, 13785, 11697],
     'Lamp'   : [15111, 15007, 14634, 14646, 15314, 14485],
@@ -254,148 +286,8 @@ sindices = {
     'Mug'    : [18309, 18368, 18448],
     'Bowl'   : [18501, 17287, 18545, 18479, 18498]}
 
-#%% Go on a journey through shapetime
-model.training=False
-good_ones = []
-journey_length = 20
-start_index = 715
-vects_sample = 8
-max_dist = 8
-interp_points = 6
-plot_step = 2
-
-journey_vecs = []
-visited_indices = [start_index]
-journey_mids = []
-
-mids = list(shape2vec.keys())
-vecs = np.array([shape2vec[m] for m in mids])
-vec_tree = spatial.KDTree(vecs)
-start_vect = shape2vec[mids[start_index]]
-journey_mids.append(mids[start_index])
-
-for i in range(journey_length) :
-    n_dists, close_ids = vec_tree.query(start_vect, k = vects_sample, distance_upper_bound=max_dist)
-    if len(shape2vec) in close_ids :
-        n_dists, close_ids = vec_tree.query(start_vect, k = vects_sample, distance_upper_bound=max_dist*3)    
-    close_ids = list(close_ids)  #[:1000]
-    
-    for index in sorted(close_ids, reverse=True):
-        if index in visited_indices:
-            close_ids.remove(index)
-    
-    next_index = random.choice(close_ids)
-    next_vect = vecs[next_index]
-    visited_indices.append(next_index)
-    interp_vects = ut.interp(next_vect, start_vect, divs = interp_points)
-    journey_vecs.extend(interp_vects)
-    start_vect = next_vect
-    journey_mids.append(mids[next_index])
-    
-journey_voxs = np.zeros(( len(journey_vecs), cf_vox_size, cf_vox_size, cf_vox_size))
-for i, vect in enumerate(journey_vecs) :
-    journey_voxs[i,...] = model.decode(vect[None,...], apply_sigmoid=True)[0,...,0]
-
-for i, vox in enumerate(journey_voxs) :
-    ut.plotVox(vox, step=plot_step, limits = cf_limits, title='', show_axes=False)    
-    
-#%% Randomly search for some object indices
-i = start_index
-for i in np.random.randint(0, len(shape2vec), size=100) :
-    vox = shapemodel.decode(shape2vec[mids[i]][None,...], apply_sigmoid=True)[0,...,0]    
-    ut.plotVox(vox, step=2, limits = cf_limits, title=i)
-    
-#%% Go on a directed trajectory
-model.training=False
-good_ones = [1781, 557, 574, 12418, 9771, 4819, 13419, 13836, 5810, 14922, 9105]
-journey_length = 20
-start_index = 8213
-end_index = 4002
-vects_sample = 5
-interp_points = 8
-percent_step_size = 0.0
-plot_step = 2
-
-journey_vecs = []
-visited_indices = [start_index]
-
-mids = list(shape2vec.keys())
-vecs = np.array([shape2vec[m] for m in mids])
-vec_tree = spatial.KDTree(vecs)
-start_vect = shape2vec[mids[start_index]]
-end_vect = shape2vec[mids[end_index]]
-
-for i in range(journey_length) :
-    step_vec = (1-percent_step_size)*start_vect + (percent_step_size)*end_vect
-    percent_step_size = (i+1) / journey_length
-    
-    n_dists, close_ids = vec_tree.query(step_vec, k = vects_sample)
-    close_ids = list(close_ids)  #[:1000]
-    
-    for index in close_ids:
-        if index in visited_indices:
-            close_ids.remove(index)
-    
-    next_index = random.choice(close_ids)
-    next_vect = vecs[next_index]
-    visited_indices.append(next_index)
-    interp_vects = ut.interp(next_vect, start_vect, divs = interp_points)
-    journey_vecs.extend(interp_vects)
-    start_vect = next_vect
-    
-journey_voxs = np.zeros(( len(journey_vecs), cf_vox_size, cf_vox_size, cf_vox_size))
-for i, vect in enumerate(journey_vecs) :
-    journey_voxs[i,...] = model.decode(vect[None,...], apply_sigmoid=True)[0,...,0]
-
-for i, vox in enumerate(journey_voxs) :
-    ut.plotVox(vox, step=plot_step, limits = cf_limits, title='', show_axes=False)  
-    
-
-   
-    
-    
-    
-    
-    
-    
-    
-    
-    
-    
-#%% Run model on data to get latent vects and loss not using train dataset
-shape2loss = {}
-shape2vec = {}
-for sample, label in tqdm(zip(all_voxs, all_mids), unit_scale=True, desc="Saving shape 2 vec: ", unit=" encodes", total=len(all_voxs))  :
-    sample = tf.cast(sample, dtype=tf.float32)
-    shape2vec[label] = model.encode(sample[None,...], reparam=True).numpy()[0]
-    shape2loss[label] = model.compute_loss(sample[None,...]).numpy()    
-    
-rdir = lg.root_dir
-f = open(os.path.join(rdir,"shape2vec.pkl"),"wb")
-pickle.dump(shape2vec,f)
-f.close()
-
-f = open(os.path.join(rdir,"shape2loss.pkl"),"wb")
-pickle.dump(shape2loss,f)
-f.close()
-
-#%% Read shape2vec pickle
-rdir = lg.root_dir
-infile = open(os.path.join(rdir,"shape2vec.pkl"),'rb')
-shape2vec = pickle.load(infile)
-infile.close()
-
-#%% Load pickle file
-vect = new_dict['17c5c22c9ab97788db67d56f11b1bed6'].reshape((1, 100))
-gen_model = model.decode(vect).numpy()[0,...,0]
-ut.plotVox(gen_model)
-
-
-
-
-
-
-
+#%% Start the journey based on the previously selected indices
+journey(journey_length = 20, vects_sample=8, max_dist=8, interp_points=6, plot_step=2, start_index = start_indices['Table'][2])
 
 
 

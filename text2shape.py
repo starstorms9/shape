@@ -1,9 +1,8 @@
 '''
-This file is intended for two purposes:
+This file is intended for three purposes:
     1. Training the text model
     2. Loading in and quickly testing the overall text2shape model
-    
-
+    3. Generating sample description datasets for use elsewhere
 '''
 
 #%% Imports
@@ -19,7 +18,7 @@ import spacy
 from tqdm import tqdm
 
 import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
+import seaborn as sns
 
 import cvae as cv
 import utils as ut

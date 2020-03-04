@@ -1,3 +1,13 @@
+'''
+This file is a repository of commonly used methods for a variety of different parts of the program.
+
+The basic categories are:
+    1. Basic math functions
+    2. Data loading and modifying methods
+    3. 3D model loading and modification methods
+    4. Various 2D and 3D plotting methods
+'''
+
 #%% Imports
 import numpy as np
 import os
@@ -5,6 +15,7 @@ import subprocess
 import re
 
 import skimage.measure as sm
+import pickle
 import time
 import json
 import pandas as pd
@@ -12,6 +23,7 @@ import random
 from tqdm import tqdm
 from scipy import signal
 from shutil import copyfile
+import configs as cf
 
 import matplotlib.cm as cm
 import matplotlib.pyplot as plt
@@ -22,7 +34,6 @@ import plotly.figure_factory as FF
 import tensorflow as tf
 
 #%% Global variables
-dfmeta_fp = '/data/sn/all/meta/dfmeta.csv'
 plot_out_dir = ''
 tax = []
 meta = []
@@ -100,6 +111,17 @@ def superSample(list_to_sample, samples) :
         return random.sample(list_to_sample, samples)
 
 #%% Data methods
+def loadPickle(filepath, item_to_save) :
+    f = open(filepath,"wb")
+    pickle.dump(item_to_save, f)
+    f.close()
+
+def dumpPickle(filepath) :
+    infile = open(filepath,'rb')
+    item = pickle.load(infile)
+    infile.close()
+    return item
+ 
 def addTimeStamp(path='') :
     os.environ['TZ'] = 'US/Pacific'
     time.tzset()
@@ -164,8 +186,6 @@ def loadData(target_vox_size, max_loads_per_cat, vox_in_dir, cat_prefixes):
     return voxs, mids
 
 def read_header(fp):
-    """ Read binvox header. Mostly meant for internal use.
-    """
     line = fp.readline().strip()
     if not line.startswith(b'#binvox'):
         raise IOError('Not a binvox file')
@@ -199,9 +219,9 @@ def readTax(tax_fn) :
     tax['numc'] = tax.apply (lambda row: len(row.children), axis=1)
     return tax
 
-def readMeta(meta_fn) :
+def readMeta() :
     global meta
-    meta = pd.read_csv(meta_fn)
+    meta = pd.read_csv(cf.META_DATA_CSV)
     return meta
 
 def getMidCat(modelid) :
@@ -229,12 +249,14 @@ def renameVoxs(vox_in_dir, prefix) :
         os.rename(fullpath, newpath)
 
 #%% 3D Model Functions
-def showBinvox(modelid, vox_in_dir = '/media/starstorms/DATA/Insight/ShapeNet/all') :
+def showBinvox(modelid, vox_in_dir = '') :
     category = '0{}'.format(getMidCat(modelid))
     fullpath = '{}/{}/{}/models/model_normalized.solid.binvox'.format(vox_in_dir, category, modelid)
     subprocess.call('viewvox {}'.format(fullpath), shell=True)
 
-def showPic(modelid, title='', pic_in_dir='/home/starstorms/Insight/ShapeNet/renders') :
+def showPic(modelid, title='', pic_in_dir='') :
+    if pic_in_dir == '' :
+        pic_in_dir = cf.RENDERS_DIR
     fullpath = os.path.join(pic_in_dir, modelid+'.png')
     img = mpimg.imread(fullpath)
     plt.suptitle(title)
@@ -281,9 +303,6 @@ def getSparsity(vox) :
 def makeGaussKernel() :
     global kernel
     sigma = 1.0
-    # x = np.arange(-3,4,1)
-    # y = np.arange(-3,4,1)
-    # z = np.arange(-3,4,1)
     x = np.arange(-6,7,1)
     y = np.arange(-6,7,1)
     z = np.arange(-6,7,1)
@@ -333,10 +352,13 @@ def checkStopSignal(dir_path='/data/sn/all/'):
         return False
 
 #%% Display Functions
-
 # Create gif from images in folder with bash and ImageMagick (replace XX with max number of images or just set high and error)
 # !convert -delay 15 -loop 0 *{000..XXX}.png car2truck.gif    
 def makeGifFromDir(gif_in_dir, name) :
+    '''
+    This handy method takes a directory as input that has the saved files from from matplotlib plots and renames them properly so they can be turned into a bouncing cyclic gif.
+    Primarily used for creating the interpolation animations.
+    '''
     natsort = lambda l : sorted(l,key=lambda x:int(re.sub("\D","",x)or 0))
     pngs = natsort(list(os.listdir(gif_in_dir)))
     
@@ -432,8 +454,6 @@ def exportBinvoxes(in_dir, out_dir, obj_prefix, vox_size) :
     subprocess.call('rm {}/*.binvox'.format(in_dir), shell=True)
     # Create binvox files     In bash it's this:    for f in objs/{obj_prefix}*.obj; do file=${f%%.*}; ./binvox ${file}.obj -pb -d {vox_size};  done;
     subprocess.call('for f in {}/{}*.obj; do file=${{f%%.*}}; ./binvox ${{file}}.obj -pb -d {};  done;'.format(in_dir, obj_prefix, vox_size), shell=True)
-    # Rename files with voxel size and other info
-    # subprocess.call('mv {}/*.binvox {}'.format(in_dir, out_dir), shell=True)
     # Move binvox files to output dir
     subprocess.call('mv {}/*.binvox {}'.format(in_dir, out_dir), shell=True)
     
@@ -455,10 +475,12 @@ def tri_indices(simplices):
     return ([triplet[c] for triplet in simplices] for c in range(3))
 
 def plotly_trisurf(x, y, z, simplices, colormap=cm.RdBu, plot_edges=None):
+    '''
+    This function plots 3D meshes with plotly. It was copied from plotly documentation.
+    '''
     #x, y, z are lists of coordinates of the triangle vertices 
     #simplices are the simplices that define the triangularization;
-    #simplices  is a numpy array of shape (no_triangles, 3)
-    #insert here the  type check for input data
+    #simplices is a numpy array of shape (no_triangles, 3)
 
     points3D=np.vstack((x,y,z)).T
     tri_vertices= list(map(lambda index: points3D[index], simplices))# vertices of the surface triangles     
@@ -478,7 +500,7 @@ def plotly_trisurf(x, y, z, simplices, colormap=cm.RdBu, plot_edges=None):
                      name=''
                     )
 
-    if plot_edges is None:# the triangle sides are not plotted 
+    if plot_edges is None: # the triangle sides are not plotted 
         return [triangles]
     else:
         #define the lists Xe, Ye, Ze, of x, y, resp z coordinates of edge end points for each triangle

@@ -1,3 +1,10 @@
+'''
+This file is the text encoder model.
+It uses spacy word embeddings (which are based on GloVe). The medium sized embeddings are used here ('en_core_web_md').
+
+There are 3 LSTM layers and 4 dense layers in this model and a significant amount of regularization.
+'''
+
 #%% Imports
 import tensorflow as tf
 import spacy
@@ -6,7 +13,7 @@ from tensorflow.keras import regularizers
 import numpy as np
 import os
 
-#%% RNN Class
+#%% RNN + Dense Class that extends the standard keras model
 class TextSpacy(tf.keras.Model):
     spacy_embeddings = None
     
@@ -40,7 +47,6 @@ class TextSpacy(tf.keras.Model):
         return self.model(text)
     
     def get_embeddings(self):
-        # nlp = en_core_web_md.load(parser=False, tagger=False, entity=False)
         nlp = spacy.load("en_core_web_md", parser=False, tagger=False, entity=False)
         vocab = nlp.vocab
         max_rank = max(lex.rank for lex in vocab if lex.has_vector)

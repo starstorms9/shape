@@ -1,38 +1,62 @@
+'''
+This class is used to automatically create and organize training info.
+
+For each run, it creates a new folder structure like this example:
+    
+0131-0411/
+├── code_file.txt
+├── configs.csv
+├── logs
+│   └── events.out.tfevents.1580472882.ip-172-31-26-36
+├── models
+│   ├── checkpoint
+│   ├── ckpt-1.data-00000-of-00002
+│   ├── ckpt-1.data-00001-of-00002
+│   ├── ckpt-1.index
+│   ├── ckpt-2.data-00000-of-00002
+│   ├── ckpt-2.data-00001-of-00002
+│   └── ckpt-2.index
+└── plots
+    ├── Original.png
+    ├── Reconstruct 10.png
+    └── Reconstruct 15.png
+    
+The top level folder is named DDDD-TTTT where DDDD is the date with month followed by date and TTT is the military time the folder was created.
+The code_file.txt contains copies of the actual code from any input functions / classes.
+The configs.csv takes in any local variables with the prefix cf_ and puts them into a csv.
+The logs file is a tensorboard log file created with easy_tf2_log.py
+The models folder contains all of the saved models from training.
+The plots folder contains any output plots during training such as shape reconstructions.    
+'''
+
 #%% Imports
-import numpy as np
 import os
-import time
-import pandas as pd
 import inspect
 import csv
 
 import utils as ut
-import easy_tf_log as etl
+import easy_tf2_log as etl
 import tensorflow as tf
+import configs as cf
 
-#%%
+#%% Logger class
 class logger():
     def __init__(self, run_name='', root_dir=None, trainMode = False, txtMode = False):
-        self.remote = os.path.isdir('/data/sn/all') 
+        self.remote = cf.REMOTE
         self.training = trainMode or self.remote
         self.total_epochs = 1
         self.run_name = run_name
-        
-        local_root_dir = '/home/starstorms/Insight/shape/runs/'
-        local_vox_in_dir = '/home/starstorms/Insight/ShapeNet/all/'
-        remote_root_dir = '/data/sn/all/runs/'
-        remote_vox_in_dir = '/data/sn/all/all/'
 
         self.new_run = (root_dir == None)
         if (self.new_run) :
-            self.root_dir = remote_root_dir if self.remote else local_root_dir
+            self.root_dir = cf.SHAPE_RUN_DIR
             self.root_dir = self.root_dir + ut.addTimeStamp()
         else :
             self.root_dir = root_dir
         
         if txtMode : self.root_dir = self.root_dir.replace('runs', 'txtruns')
         
-        self.vox_in_dir = remote_vox_in_dir if self.remote else local_vox_in_dir
+        self.vox_in_dir = cf.VOXEL_FILEPATH
         self.plot_out_dir = self.root_dir + '/plots'
         self.model_saves = self.root_dir + '/models'
         self.tblogs = self.root_dir + '/logs'
@@ -99,4 +123,4 @@ class logger():
             w.writerow([key, val])      
     
     def updatePlotDir(self):
-        ut.plot_out_dir = self.plot_out_dir    
+        ut.plot_out_dir = self.plot_out_dir
