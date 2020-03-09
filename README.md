@@ -109,7 +109,11 @@ Then it repeats to find new vectors.
   - Variety parameter
     - This determines the diversity of the models by setting how many local vectors to choose from.
 
-### Example pre-rendered gifs below:
+### Results Overview:
+Selected results from the streamlit app:
+![results.png](https://github.com/starstorms9/shape/blob/master/media/results.png "")
+
+#### Shape Encoder Interpolations:
 Interpolating between various swivel chairs:
 
 ![swivel chairs gif](https://github.com/starstorms9/shape/blob/master/media/swivelchairs.gif "")
@@ -118,3 +122,4 @@ Interpolating between various random sofas:
 
 ![couches gif](https://github.com/starstorms9/shape/blob/master/media/couches.gif "")
 
+(many more gifs available in the media/ folder of this repo)
