@@ -35,7 +35,7 @@ class TextSpacy(tf.keras.Model):
         model.add(Bidirectional(LSTM(256, kernel_regularizer=regularizers.l2(0.001))))
         model.add(Dropout(self.dropoutRate))
         model.add(Dense(1024, activation='relu', kernel_regularizer=regularizers.l2(0.001)))
-        model.add(Dropout(self.dropoutRate))model
+        model.add(Dropout(self.dropoutRate))
         model.add(Dense(512, activation='relu', kernel_regularizer=regularizers.l2(0.001)))
         model.add(Dropout(self.dropoutRate))
         model.add(Dense(256, activation='relu', kernel_regularizer=regularizers.l2(0.001)))
