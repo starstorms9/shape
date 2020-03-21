@@ -94,3 +94,4 @@ class TextSpacy(tf.keras.Model):
         print("\nPer Layer:")
         for i, layer in enumerate(self.model.layers) :
             print('{:2d} : {:20} In: {:20} Out: {}'.format(i, layer.name, repr(layer.input_shape), layer.output_shape))
+            

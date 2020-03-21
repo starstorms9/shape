@@ -525,3 +525,4 @@ def plotlySurf(verts, faces) :
     x, y, z = verts[:,0], verts[:,1], verts[:,2]
     triangles, lines = plotly_trisurf(x,y,z, faces, colormap=cm.RdBu, plot_edges=True)
     return triangles, lines
+

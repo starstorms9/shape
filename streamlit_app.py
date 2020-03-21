@@ -471,6 +471,7 @@ def manual() :
     gif_url = gif_urls[cat_options.index(selected_cat)]
     st.image(gif_url, use_column_width=True)
     
+    
 #%% Main selector system
 modeOptions = ['Manual', 'Text to Shape', 'Latent Vect Exploration', 'Shape Interpolation']
 st.sidebar.header('Select Mode:')

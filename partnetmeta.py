@@ -506,3 +506,4 @@ dfall = pd.DataFrame.merge(dfall, dfsubcats, how='left', on=['mid', 'mid'])
 #%% Rearrange columns and save the completed dfmeta file
 dcols = ['mid','cat','cattext','annoid','subcats','desc','details','dx','dy','dz','dsq','cx','cy','cz','csq']
 dfall[dcols].to_csv('/home/starstorms/Insight/ShapeNet/meta/dfmeta.csv')
+

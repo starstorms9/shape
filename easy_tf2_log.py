@@ -111,5 +111,4 @@ def set_writer(writer):
 def tflog(key, value, step=None):
     if not Logger.DEFAULT:
         set_dir('logs')
-    Logger.DEFAULT.log_key_value(key, value, step)
-    
+    Logger.DEFAULT.log_key_value(key, value, step)    
