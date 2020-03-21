@@ -14,32 +14,32 @@ header.header("Importing libraries...")
 import numpy as np
 import pandas as pd
 
+server_up = True
 try :
     import plotly
+    import re
+    import time
+    import pickle
+    from scipy import spatial
+    import skimage.measure as sm
+    
+    import matplotlib.pyplot as pltmodel
+    import matplotlib.image as mpimg
+    import matplotlib.pyplot as plt
+    from mpl_toolkits.mplot3d import Axes3D
+    
+    import plotly.express as px
+    import plotly.figure_factory as FF
+    import os
+    from tensorflow.keras.preprocessing.sequence import pad_sequences
+    import spacy
+    import random as rn
+    
+    import cvae as cv
+    import textspacy as ts
 except :
     st.write("Server is currently overloaded, please try again later!")
-    sys.exit()
-
-import re
-import time
-import pickle
-from scipy import spatial
-import skimage.measure as sm
-
-import matplotlib.pyplot as pltmodel
-import matplotlib.image as mpimg
-import matplotlib.pyplot as plt
-from mpl_toolkits.mplot3d import Axes3D
-
-import plotly.express as px
-import plotly.figure_factory as FF
-import os
-from tensorflow.keras.preprocessing.sequence import pad_sequences
-import spacy
-import random as rn
-
-import cvae as cv
-import textspacy as ts
+    server_up = False
 
 #%% Global setup variables
 cf_vox_size = 64
@@ -480,9 +480,10 @@ def manual() :
     
     
 #%% Main selector system
-modeOptions = ['Manual', 'Text to Shape', 'Latent Vect Exploration', 'Shape Interpolation']
-st.sidebar.header('Select Mode:')
-mode = st.sidebar.radio("", modeOptions, index=0)
-
-tabMethods = [manual, text2Shape, vectExplore, shapetime]
-tabMethods[modeOptions.index(mode)]()
+if server_up :
+    modeOptions = ['Manual', 'Text to Shape', 'Latent Vect Exploration', 'Shape Interpolation']
+    st.sidebar.header('Select Mode:')
+    mode = st.sidebar.radio("", modeOptions, index=0)
+    
+    tabMethods = [manual, text2Shape, vectExplore, shapetime]
+    tabMethods[modeOptions.index(mode)]()
