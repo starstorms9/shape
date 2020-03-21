@@ -15,31 +15,31 @@ import numpy as np
 import pandas as pd
 
 server_up = True
-try :
-    import plotly
-    import re
-    import time
-    import pickle
-    from scipy import spatial
-    import skimage.measure as sm
-    
-    import matplotlib.pyplot as pltmodel
-    import matplotlib.image as mpimg
-    import matplotlib.pyplot as plt
-    from mpl_toolkits.mplot3d import Axes3D
-    
-    import plotly.express as px
-    import plotly.figure_factory as FF
-    import os
-    from tensorflow.keras.preprocessing.sequence import pad_sequences
-    import spacy
-    import random as rn
-    
-    import cvae as cv
-    import textspacy as ts
-except :
-    header.header("Server is currently overloaded, please try again later!")
-    server_up = False
+# try :
+import plotly
+import re
+import time
+import pickle
+from scipy import spatial
+import skimage.measure as sm
+
+import matplotlib.pyplot as pltmodel
+import matplotlib.image as mpimg
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+
+import plotly.express as px
+import plotly.figure_factory as FF
+import os
+from tensorflow.keras.preprocessing.sequence import pad_sequences
+import spacy
+import random as rn
+
+import cvae as cv
+import textspacy as ts
+# except :
+#     header.header("Server is currently overloaded, please try again later!")
+#     server_up = False
 
 #%% Global setup variables
 cf_vox_size = 64
