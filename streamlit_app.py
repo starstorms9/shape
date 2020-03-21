@@ -6,13 +6,20 @@ The app can be launched locally by using a terminal to navigate to the directory
     streamlit run streamlit_app.py
 '''
 
+import sys
 import streamlit as st
 header = st.title('')
 header.header("Importing libraries...")
 
 import numpy as np
 import pandas as pd
-import plotly
+
+try :
+    import plotly
+except :
+    st.write("Server is currently overloaded, please try again later!")
+    sys.exit()
+
 import re
 import time
 import pickle
