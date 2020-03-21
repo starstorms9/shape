@@ -38,7 +38,7 @@ try :
     import cvae as cv
     import textspacy as ts
 except :
-    st.write("Server is currently overloaded, please try again later!")
+    header.header("Server is currently overloaded, please try again later!")
     server_up = False
 
 #%% Global setup variables
