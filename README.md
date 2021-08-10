@@ -39,8 +39,9 @@ The following files are used by the main programs:
 - **easy_tf2_log.py** Easy tensorboard logging file from [here](https://github.com/mrahtz/easy-tf-log) modified for use with tensorflow 2.0
 
 # Streamlit App Manual
-See the demo live at [datanexus.xyz](http://datanexus.xyz) (works best with Firefox or Safari, not Chrome!)
-            
+
+![#f03c15](https://via.placeholder.com/15/f03c15/000000?text=+) **The demo is down now as I've moved onto other projects and haven't had the time to maintain this, leaving below info for posterity.**
+
 ## Available Tabs:            
 - ### Text to shape generator
 - ### Latent vector exploration
